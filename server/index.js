@@ -1,11 +1,11 @@
-// server/index.js
 require('dotenv').config();          
+
+const pool = require('./db');
 
 const express = require('express'); 
 const cors = require('cors');        
 
 const app = express();              
-
 
 
 // note: Middleware = a function that runs on every incoming request before it reaches the route
@@ -20,15 +20,26 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 
+app.get('/api/v1/db-check', async (req, res) => {     // ← ADD THIS WHOLE ROUTE
+  try {
+    const result = await pool.query('SELECT now()');
+    res.json({ connected: true, time: result.rows[0].now });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ connected: false, error: err.message });
+  }
+});
+
+
 // to start the server
-const PORT = process.env.PORT || 5000;              
+const PORT = process.env.PORT || 5001;              
 app.listen(PORT, () => {                            
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}/api/v1/health`);
 });
 
 
 
 // notes:
-// Port 5000 (http://localhost:5000): where Node/Express backend lives
+// Port 5001 (http://localhost:5001): where Node/Express backend lives
 // It waits here for requests
 // Port 5173 (http://localhost:5173): where Vite frontend lives.
