@@ -5,6 +5,8 @@ const pool = require('./db');
 const express = require('express'); 
 const cors = require('cors');        
 
+const authRoutes = require('./routes/auth');
+
 const app = express();              
 
 
@@ -12,6 +14,8 @@ const app = express();
 // tells the browser "requests from the React app at :5173 are allowed"
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());                            
+
+app.use('/api/v1/auth', authRoutes);
 
 
 // sample route
@@ -29,12 +33,13 @@ app.get('/api/v1/db-check', async (req, res) => {     // ← ADD THIS WHOLE ROUT
     res.status(500).json({ connected: false, error: err.message });
   }
 });
+ 
 
 
 // to start the server
 const PORT = process.env.PORT || 5001;              
 app.listen(PORT, () => {                            
-  console.log(`Server running on http://localhost:${PORT}/api/v1/health`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
 
 
