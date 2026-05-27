@@ -5,7 +5,10 @@ function authenticateToken(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'NO_TOKEN_PROVIDED' });
+        return res.status(401).json({ error: {
+            code: 'UNAUTHENTICATED',
+            message: 'No token provided'
+        }});
     }
 
     const token = authHeader.split(' ')[1];
@@ -15,7 +18,10 @@ function authenticateToken(req, res, next) {
         req.user = payload; // attach user info to request
         next();
     } catch (err) {
-        return res.status(403).json({ error: 'INVALID_TOKEN' });
+        return res.status(401).json({ error: {
+            code: 'UNAUTHORIZED',
+            message: 'Invalid or expired token'
+        }});
     }
 }
 

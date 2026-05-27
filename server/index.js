@@ -5,9 +5,10 @@ const pool = require('./db');
 const express = require('express'); 
 const cors = require('cors');        
 
-const authRoutes = require('./routes/auth');
-
 const app = express();              
+
+const authRoutes = require('./routes/auth');
+const itemsRoutes = require('./routes/items');
 
 
 // note: Middleware = a function that runs on every incoming request before it reaches the route
@@ -16,6 +17,8 @@ app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());                            
 
 app.use('/api/v1/auth', authRoutes);
+
+app.use('/api/v1/items', itemsRoutes);
 
 
 // sample route
