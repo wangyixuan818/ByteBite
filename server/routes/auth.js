@@ -187,7 +187,7 @@ router.post('/login', async (req, res) => {
 
 
 // signout
-router.post('/signout', (req, res) => {
+router.post('/logout', authenticateToken, (req, res) => {
     return res.status(204).end();
 });
 
