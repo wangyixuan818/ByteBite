@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const pool = require('../db');         
-const { tr } = require('zod/v4/locales');
 
 const router = express.Router();
 
@@ -20,13 +19,21 @@ router.get('/me', authenticateToken, async (req, res) => {
         const user = userRes.rows[0];
 
         if (!user) {
-            return res.status(404).json({ error: 'USER_NOT_FOUND' });
+            return res.status(401).json({ error: {
+                code: 'UNAUTHENTICATED',
+                message: 'User not found'
+            }
+        });
         }
 
         return res.status(200).json({ user });
+
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ error: 'SERVER_ERROR' });
+        return res.status(500).json({ error: {
+            code:'SERVER_ERROR' ,
+            message: 'Something went wrong'}
+    });
     }
 });
 
@@ -42,7 +49,11 @@ const signupSchema = z.object({
 router.post('/signup', async (req, res) => {
     const parsed = signupSchema.safeParse(req.body);
     if (!parsed.success) {
-    return res.status(400).json({ error: 'VALIDATION_ERROR' });
+        const msg = parsed.error.issues.map(i => i.message).join('; ');
+    return res.status(400).json({ error: {
+        code: 'VALIDATION_ERROR',
+        message: msg }
+    });
     }
 
     const { email, password, display_name } = parsed.data;
@@ -94,10 +105,16 @@ router.post('/signup', async (req, res) => {
         await client.query('ROLLBACK');
         console.error(err);
         if (err.code === '23505') { // unique_violation
-            return res.status(409).json({ error: 'EMAIL_ALREADY_EXISTS' });
+            return res.status(409).json({ error: {
+                code: 'EMAIL_ALREADY_EXISTS',
+                message: 'Email already exists'
+            }});
         }
         console.error(err);
-        return res.status(500).json({ error: 'SERVER_ERROR' });
+        return res.status(500).json({ error: {
+            code: 'SERVER_ERROR',
+            message: 'Something went wrong'
+        }});
     } finally {
         client.release();
     }
@@ -115,7 +132,11 @@ const loginSchema = z.object({
 router.post('/login', async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
-        return res.status(400).json({ error: 'VALIDATION_ERROR', details: parsed.error.issues });
+        const msg = parsed.error.issues.map(i => i.message).join('; ');
+        return res.status(400).json({ error: {
+            code: 'VALIDATION_ERROR',
+            message: msg
+        }});
     }
 
     const { email, password } = parsed.data;
@@ -128,7 +149,10 @@ router.post('/login', async (req, res) => {
         );
 
         if (userRes.rows.length === 0) {
-            return res.status(401).json({ error: 'INVALID_USER' });
+            return res.status(401).json({ error: {
+                code: 'INVALID_USER',
+                message: 'Invalid user'
+            }});
         }
 
         const user = userRes.rows[0];
@@ -136,7 +160,10 @@ router.post('/login', async (req, res) => {
         // verify password
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
-            return res.status(401).json({ error: 'INVALID_PASSWORD' });
+            return res.status(401).json({ error: {
+                code: 'INVALID_PASSWORD',
+                message: 'Invalid password'
+            }});
         }
 
         // create JWT token
@@ -151,7 +178,10 @@ router.post('/login', async (req, res) => {
             token });
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ error: 'SERVER_ERROR' });
+        return res.status(500).json({ error: {
+            code: 'SERVER_ERROR',
+            message: 'Something went wrong'
+        }});
     } 
 });
 
