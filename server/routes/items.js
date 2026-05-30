@@ -41,7 +41,7 @@ const createItemSchema = z.object({
     quantity: z.number().int().positive().optional(),
     unit: z.string().max(50).optional(),
     expiry_date: z.string().optional(), // YYYY-MM-DD
-    storage: z.enum(['fridge', 'freezer', 'pantry']).optional(),
+    storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
 });
 
 
@@ -63,10 +63,11 @@ router.post('/', async (req, res) => {
         const householdId = await getHouseholdId(req.user.userId);
         const insertRes = await pool.query(
             `INSERT INTO items
-            (household_id, name, food_type_id, quantity, unit, expiry_date, storage)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (household_id, name, food_type_id, quantity, unit, expiry_date, storage, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *`,
-            [householdId, name, food_type_id, quantity, unit, expiry_date, storage]
+            [householdId, name, food_type_id ?? null, quantity ?? null, unit ?? null, 
+                expiry_date ?? null, storage ?? null, req.user.userId]
         );
         return res.status(201).json({ item: insertRes.rows[0] });
     } catch (err) {
@@ -112,7 +113,7 @@ const updateItemSchema = z.object({
     quantity: z.number().int().positive().optional(),
     unit: z.string().max(50).optional(),
     expiry_date: z.string().optional(),
-    storage: z.enum(['fridge', 'pantry', 'freezer']).optional(),
+    storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
     status: z.enum(['active', 'consumed', 'removed', 'expired']).optional(),
 });
 
