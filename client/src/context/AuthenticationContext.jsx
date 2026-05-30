@@ -3,6 +3,13 @@ import axios from 'axios';
 
 const AuthenticationContext = createContext(null);
 
+export const getAuthHeader = () => {
+    const token = localStorage.getItem('authenticationToken');
+
+    if (!token) { return null; }
+    return { Authorization: `Bearer ${token}`};
+}
+
 export function AuthenticationProvider({children}) {
     const [user, setUser] = useState(null); 
     const [loading, setLoading] = useState(true);
@@ -10,23 +17,19 @@ export function AuthenticationProvider({children}) {
 
     // when user refreshes the page (this is to keep user logged in):
     useEffect(() => {
-        const token = localStorage.getItem('authenticationToken');
-
-        if (!token) { // no token
-            setLoading(false); //skip
-            return;
-        }
-        //TODO: replace the placeholder
-        // Commented out for testing now
-       /* axios.get('/api/auth/me', {
-            headers: { Authorization: `Bearer ${token}`}
-        })
+       const headers = getAuthHeader();
+       if (!headers) {
+        setLoading(false);
+        return;
+       }
+       axios.get('/api/v1/auth/me', { headers})
         .then(res => setUser(res.data.user))
         .catch(() => localStorage.removeItem('authenticationToken'))
         .finally(() => setLoading(false)); 
-        */
-       setUser({ id: 1, email: "test@test.com", display_name: "Test User" });
-       setLoading(false);
+        
+       // wrote for testing (fake response)
+       // setUser({ id: 1, email: "test@test.com", display_name: "Test User" });
+       // setLoading(false);
     }, []);
 
 
@@ -36,11 +39,10 @@ export function AuthenticationProvider({children}) {
     }
 
     const logout = () => {
-        const token = localStorage.getItem('authenticationToken');
-
-        axios.post('/api/auth/logout', {}, {
-            headers: { Authorization: 'Bearer ${token}' }
-        }).catch(() => {});
+        const headers = getAuthHeader();
+        // we clear client state regardless of response
+        axios.post('/api/v1/auth/logout', {}, { headers })
+          .catch(() => {});
 
         localStorage.removeItem('authenticationToken');
         setUser(null);
@@ -48,7 +50,7 @@ export function AuthenticationProvider({children}) {
 
 
     return (
-        <AuthenticationContext.Provider value={{ user, loading, login, logout }}>
+        <AuthenticationContext.Provider value={{ user, loading, login, logout, getAuthHeader}}>
             {children}
         </AuthenticationContext.Provider>
     );

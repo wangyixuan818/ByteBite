@@ -16,22 +16,29 @@
         e.preventDefault();
         setError("");
 
+        if (password.length < 8) {
+            setError("Password length must be at least 8 characters");
+            return;
+        }
+
         try {
+            /*
             const fakeResponse = {
                 user: { id: 1, email: email, display_name: "Test User" },
                 token: "fake-token-123"
             };
-            // temporarily commented out post for testing
-            // const response = await axios.post("https://jsonplaceholder.typicode.com/posts", {display_name, email, password});
-            // login(response.data.user, response.data.token);
-
             login(fakeResponse.user, fakeResponse.token);
+            // temporarily commented out post for testing
+            */
+            const response = await axios.post("/api/v1/auth/signup", {display_name, email, password});
+            login(response.data.user, response.data.token);
+
             navigate('/dashboard');
         } catch (err) {
-            const code = err.response?.data?.code;
+            const code = err.response?.data?.error.code;
             if (code === "VALIDATION_ERROR") {
-                setError("Please check you inputs. Password must be at least 8 characters.");
-            } else if (code === "EMAIL_TAKEN") {
+                setError("Please make sure your email address is valid.");
+            } else if (code === "EMAIL_ALREADY_EXISTS") {
                 setError("This email is already in use.");
             } else {
                 setError("Please try again.")

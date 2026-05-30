@@ -15,23 +15,32 @@
         e.preventDefault();
         setError("");
 
+        if (password.length < 8) {
+            setError("Password length must be at least 8 characters");
+            return;
+        }
+
         try {
+            /*
             const fakeResponse = {
                 user: { id: 1, email: email, display_name: "Test User" },
                 token: "fake-token-123"
             };
-            // temporarily commented out post for testing
-            // remember to replace the placeholder
-            // const response = await axios.post("https://jsonplaceholder.typicode.com/posts", {email, password});
-            // login(response.data.user, response.data.token);
-
-            login(fakeResponse.user, fakeResponse.token);
+            login(fakeResponse.user, fakeResponse.token); for testing
+            //temporarily commented out post for testing
+            */
+            const response = await axios.post("/api/v1/auth/login", {email, password});
+            login(response.data.user, response.data.token);
             navigate('/dashboard');
         } catch (err) {
             console.log(err);
-            const code = err.response?.data?.code;
-            if (code === "INVALID_CREDENTIALS") {
-                setError("Incorrect login information");
+            const code = err.response?.data?.error.code;
+            if (code === 'INVALID_USER') {
+                setError("Invalid user.");
+            } else if (code === 'INVALID_PASSWORD') {
+                setError("Incorrect password.");
+            } else if (code === 'VALIDATION_ERROR') {
+                setError("Incorrect input format.");
             } else {    
                 setError("Please try again.");
             }
