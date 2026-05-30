@@ -185,4 +185,12 @@ router.post('/login', async (req, res) => {
     } 
 });
 
+
+// signout
+router.post('/signout', (req, res) => {
+    return res.status(204).end();
+});
+
+
+
 module.exports = router;

@@ -9,7 +9,7 @@ const app = express();
 
 const authRoutes = require('./routes/auth');
 const itemsRoutes = require('./routes/items');
-
+const foodTypesRoutes = require('./routes/foodTypes');
 
 // note: Middleware = a function that runs on every incoming request before it reaches the route
 // tells the browser "requests from the React app at :5173 are allowed"
@@ -17,9 +17,8 @@ app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());                            
 
 app.use('/api/v1/auth', authRoutes);
-
 app.use('/api/v1/items', itemsRoutes);
-
+app.use('/api/v1/food-types', foodTypesRoutes);
 
 // sample route
 app.get('/api/v1/health', (req, res) => {           
