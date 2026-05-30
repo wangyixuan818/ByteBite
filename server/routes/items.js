@@ -41,7 +41,7 @@ const createItemSchema = z.object({
     quantity: z.number().int().positive().optional(),
     unit: z.string().max(50).optional(),
     expiry_date: z.string().optional(), // YYYY-MM-DD
-    storage: z.enum(['fridge', 'freezer', 'pantry']).optional(),
+    storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
 });
 
 
@@ -113,7 +113,7 @@ const updateItemSchema = z.object({
     quantity: z.number().int().positive().optional(),
     unit: z.string().max(50).optional(),
     expiry_date: z.string().optional(),
-    storage: z.enum(['fridge', 'pantry', 'freezer']).optional(),
+    storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
     status: z.enum(['active', 'consumed', 'removed', 'expired']).optional(),
 });
 
