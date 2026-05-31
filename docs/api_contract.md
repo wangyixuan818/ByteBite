@@ -11,13 +11,13 @@ ByteBite API Contract — Milestone 1
 
 ## Auth
 
-### POST /v1/auth/signup  (public)
+### POST /auth/signup  (public)
 Create an account. The server auto-creates a default household for the new user and adds them as owner.
 - Request: `{ "email": string, "password": string (min 8 chars), "display_name": string }`
 - 201: `{ "user": { "id", "email", "display_name" }, "token": string }`
 - Errors: 400 `VALIDATION_ERROR`, 409 `EMAIL_ALREADY_EXISTS`
 
-### POST /v1/auth/login  (public)
+### POST /auth/login  (public)
 - Request: `{ "email": string, "password": string }`
 - 200: `{ "user": { "id", "email", "display_name" }, "token": string }`
 - Errors: 401 `INVALID_USER`, `INVALID_PASSWORD`
@@ -27,7 +27,7 @@ Create an account. The server auto-creates a default household for the new user 
 For pure-JWT, the client just discards the token; this endpoint exists for symmetry/future revocation.
 - 204 No Content
 
-### GET /v1/auth/me  (auth required)
+### GET /auth/me  (auth required)
 Returns the currently logged-in user.
 - 200: `{ "user": { "id", "email", "display_name" } }`
 - Errors: 401 `UNAUTHENTICATED`
@@ -46,12 +46,12 @@ List items in the user's household.
 
 ### POST /items  (auth required)
 Add an item. If `expiry_date` is omitted, the server tries to auto-fill from `food_types` (matched by `food_type_id`, or by case-insensitive `name`). On match → sets `expiry_is_estimated=true`. On no match → `expiry_date` stays null.
-- Request: `{ "name": string (required), "food_type_id"?: number, "quantity"?: number, "unit"?: string, "added_date"?: ISO date (default today), "expiry_date"?: ISO date, "storage"?: "fridge" | "pantry" | "freezer" }`
+- Request: `{ "name": string (required), "food_type_id"?: number, "quantity"?: number, "unit"?: string, "added_date"?: ISO date (default today), "expiry_date"?: ISO date, "storage"?: "fridge" | "pantry" | "freezer" | “fridge door” | “fresh zone” }`
 - 201: `{ "item": <item> }`
 - Errors: 400 `VALIDATION_ERROR`
 
 ### GET /items/:id  (auth required)
-- 200: `{ "item": <item> }`
+- 	200: `{ "item": <item> }`
 - Errors: 404 `NOT_FOUND` (also if the item belongs to a different household)
 
 ### PATCH /items/:id  (auth required)
@@ -76,11 +76,12 @@ Hard delete (we'll revisit if Usage Analytics gets added).
   "expiry_is_estimated": true,
   "status": "active",
   "storage": "fridge",
-  "fridge_id": 1,
+  // "fridge_id": 1, for later milestone
   "created_by": 3,
   "created_at": "2026-05-20T08:30:00Z",
   "updated_at": "2026-05-20T08:30:00Z"
 }
+
 
 
 

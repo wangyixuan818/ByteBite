@@ -1,4 +1,3 @@
--- ByteBite — initial reference data
 -- Run AFTER docs/schema.sql on a fresh database. Idempotent on
 -- first run only; re-running will fail on the UNIQUE(name)
 -- constraint, which is the intended safeguard against duplicates.
