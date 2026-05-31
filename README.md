@@ -79,6 +79,7 @@ _Note: The frontend is pre-configured to automatically route any /api/* requests
 Navigate to the root of the project and run the bash script:
 
 ```bash
+chmod +x scripts/e2e-test.sh
 ./scripts/ms1BETest.sh
 ```
 
