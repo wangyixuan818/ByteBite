@@ -61,13 +61,62 @@ router.post('/', async (req, res) => {
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
+
+        // inserting the automatic expiry logic here
+        let resolvedExpiryDate = expiry_date ?? null;
+        let expiryIsEstimated = false;
+
+        if (!resolvedExpiryDate) {
+            // if no expiry date provided this will try to estimate based on food type
+            let shelfLifeDays = null;
+
+            if (food_type_id) {
+                // query the food type's average shelf life if it exists in the database
+                const foodTypeRes = await pool.query(
+                    `SELECT default_shelf_life_days FROM food_types WHERE id = $1`,
+                    [food_type_id]
+                );
+                shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days; 
+            }
+        }
+
+        if (!shelfLifeDays && name) { // try to search by name
+            // look for partial match as well but prioritise exact match first
+            const foodTypeRes = await pool.query(
+                `SELECT default_shelf_life_days 
+                FROM food_types 
+                WHERE name ILIKE '%' || $1 || '%'
+                ORDER BY
+                    CASE
+                        WHEN LOWER(name) = LOWER($1) THEN 1            -- exact match gets highest priority
+                        WHEN LOWER(name) LIKE '%' || LOWER($1) || '%' THEN 2   
+                                        -- partial match gets second priority; %word% finds all match of word
+                        ELSE 3
+                    END
+                LIMIT 1`, // limit 1 to faster a bit
+                [name]
+            );
+            shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days;
+        }
+
+        if (shelfLifeDays) {
+            const now = new Date();
+            now.setDate(now.getDate() + shelfLifeDays);
+            resolvedExpiryDate = now.toISOString().split('T')[0];     // converts to YYYYMMDD format, matching item database
+            expiryIsEstimated = true;   // set flag to true
+        }
+
+        // end of automatic expiry logic
+
+        
+
         const insertRes = await pool.query(
             `INSERT INTO items
-            (household_id, name, food_type_id, quantity, unit, expiry_date, storage, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (household_id, name, food_type_id, quantity, unit, expiry_date, expiry_is_estimated, storage, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *`,
             [householdId, name, food_type_id ?? null, quantity ?? null, unit ?? null, 
-                expiry_date ?? null, storage ?? null, req.user.userId]
+                resolvedExpiryDate, expiryIsEstimated, storage ?? null, req.user.userId] // updated to resolvedExpiryDate and included flag for estimated expiry
         );
         return res.status(201).json({ item: insertRes.rows[0] });
     } catch (err) {
@@ -139,11 +188,13 @@ router.patch('/:id', async (req, res) => {
             quantity = COALESCE($3, quantity),
             unit = COALESCE($4, unit),
             expiry_date = COALESCE($5, expiry_date),
+            expiry_is_estimated = CASE WHEN $5::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
             storage = COALESCE($6, storage),
             status = COALESCE($7, status)
             WHERE id = $8 AND household_id = $9
             RETURNING *`,
-            [name, food_type_id, quantity, unit, expiry_date, storage, status, req.params.id, householdId]
+            [name ?? null, food_type_id ?? null, quantity ?? null, unit ?? null, expiry_date ?? null, 
+                storage ?? null, status ?? null, req.params.id, householdId]
         );
         if (updateRes.rows.length === 0) {
             return res.status(404).json({ error: {
