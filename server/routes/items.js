@@ -78,34 +78,35 @@ router.post('/', async (req, res) => {
                 );
                 shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days; 
             }
-        }
+    
 
-        if (!shelfLifeDays && name) { // try to search by name
-            // look for partial match as well but prioritise exact match first
-            const foodTypeRes = await pool.query(
-                `SELECT default_shelf_life_days 
-                FROM food_types 
-                WHERE name ILIKE '%' || $1 || '%'
-                ORDER BY
-                    CASE
-                        WHEN LOWER(name) = LOWER($1) THEN 1            -- exact match gets highest priority
-                        WHEN LOWER(name) LIKE '%' || LOWER($1) || '%' THEN 2   
-                                        -- partial match gets second priority; %word% finds all match of word
-                        ELSE 3
-                    END
-                LIMIT 1`, // limit 1 to faster a bit
-                [name]
-            );
-            shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days;
-        }
+            if (!shelfLifeDays && name) { // try to search by name
+                // look for partial match as well but prioritise exact match first
+                const foodTypeRes = await pool.query(
+                    `SELECT default_shelf_life_days 
+                    FROM food_types 
+                    WHERE name ILIKE '%' || $1 || '%'
+                    ORDER BY
+                        CASE
+                            WHEN LOWER(name) = LOWER($1) THEN 1            -- exact match gets highest priority
+                            WHEN LOWER(name) LIKE '%' || LOWER($1) || '%' THEN 2   
+                                            -- partial match gets second priority; %word% finds all match of word
+                            ELSE 3
+                        END
+                    LIMIT 1`, // limit 1 to faster a bit
+                    [name]
+                );
+                shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days;
+            }
 
-        if (shelfLifeDays) {
-            const now = new Date();
-            now.setDate(now.getDate() + shelfLifeDays);
-            resolvedExpiryDate = now.toISOString().split('T')[0];     // converts to YYYYMMDD format, matching item database
-            expiryIsEstimated = true;   // set flag to true
+            if (shelfLifeDays) {
+                const now = new Date();
+                now.setDate(now.getDate() + shelfLifeDays);
+                resolvedExpiryDate = now.toISOString().split('T')[0];     // converts to YYYYMMDD format, matching item database
+                expiryIsEstimated = true;   // set flag to true
+            }
         }
-
+        
         // end of automatic expiry logic
 
         

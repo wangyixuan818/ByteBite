@@ -56,8 +56,8 @@ create table items (
   expiry_date         date,
   expiry_is_estimated boolean not null default false,
   status              text    not null default 'active'
-                          check (status in ('active','consumed','removed','expired')),
-  storage             text    check (storage in ('fridge','pantry','freezer')),
+                          check (status in ('active','consumed','removed','expired')), -- expired can also be for spoilt food then have to throw out
+  storage             text    check (storage in ('fridge','pantry','freezer', 'fridge door', 'fresh zone')),
   created_by          bigint  references users(id) on delete set null,
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
