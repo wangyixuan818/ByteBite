@@ -2,6 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const pool = require('../db');
 const reqAuth = require('../middleware/auth');
+const { formatDate, todayDate, addDays } = require('../helpers/date');
 
 const router = express.Router();
 router.use(reqAuth);
@@ -40,6 +41,7 @@ const createItemSchema = z.object({
     food_type_id: z.number().int().optional(),
     quantity: z.number().int().positive().optional(),
     unit: z.string().max(50).optional(),
+    added_date: z.string().optional(), // YYYY-MM-DD
     expiry_date: z.string().optional(), // YYYY-MM-DD
     storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
 });
@@ -57,10 +59,13 @@ router.post('/', async (req, res) => {
         }});
     }
 
-    const { name, food_type_id, quantity, unit, expiry_date, storage } = parsed.data;
+    const { name, food_type_id, quantity, unit, added_date, expiry_date, storage } = parsed.data;
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
+
+        // let added_date fall back to current date if not provided
+        const finalAddedDate = added_date ?? todayDate();
 
         // inserting the automatic expiry logic here
         let resolvedExpiryDate = expiry_date ?? null;
@@ -100,9 +105,7 @@ router.post('/', async (req, res) => {
             }
 
             if (shelfLifeDays) {
-                const now = new Date();
-                now.setDate(now.getDate() + shelfLifeDays);
-                resolvedExpiryDate = now.toISOString().split('T')[0];     // converts to YYYYMMDD format, matching item database
+                resolvedExpiryDate = addDays(finalAddedDate, shelfLifeDays);
                 expiryIsEstimated = true;   // set flag to true
             }
         }
@@ -113,10 +116,10 @@ router.post('/', async (req, res) => {
 
         const insertRes = await pool.query(
             `INSERT INTO items
-            (household_id, name, food_type_id, quantity, unit, expiry_date, expiry_is_estimated, storage, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            (household_id, name, food_type_id, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)  
             RETURNING *`,
-            [householdId, name, food_type_id ?? null, quantity ?? null, unit ?? null, 
+            [householdId, name, food_type_id ?? null, quantity ?? null, unit ?? null, finalAddedDate,
                 resolvedExpiryDate, expiryIsEstimated, storage ?? null, req.user.userId] // updated to resolvedExpiryDate and included flag for estimated expiry
         );
         return res.status(201).json({ item: insertRes.rows[0] });
@@ -145,7 +148,7 @@ router.get('/:id', async (req, res) => {
                 message: 'Item not found'
             }});
         }
-        return res.status(200).json(item);
+        return res.status(200).json({ item });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: {
@@ -162,6 +165,7 @@ const updateItemSchema = z.object({
     food_type_id: z.number().int().optional(),
     quantity: z.number().int().positive().optional(),
     unit: z.string().max(50).optional(),
+    added_date: z.string().optional(),
     expiry_date: z.string().optional(),
     storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
     status: z.enum(['active', 'consumed', 'removed', 'expired']).optional(),
@@ -178,7 +182,7 @@ router.patch('/:id', async (req, res) => {
         }});
     }
 
-    const { name, food_type_id, quantity, unit, expiry_date, storage, status } = parsed.data;
+    const { name, food_type_id, quantity, unit, added_date,expiry_date, storage, status } = parsed.data;
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
@@ -188,14 +192,15 @@ router.patch('/:id', async (req, res) => {
                 food_type_id = COALESCE($2, food_type_id),
                 quantity = COALESCE($3, quantity),
                 unit = COALESCE($4, unit),
-                expiry_date = COALESCE($5, expiry_date),
-                expiry_is_estimated = CASE WHEN $5::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
-                storage = COALESCE($6, storage),
-                status = COALESCE($7, status)
+                added_date = COALESCE($5, added_date),
+                expiry_date = COALESCE($6, expiry_date),
+                expiry_is_estimated = CASE WHEN $6::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
+                storage = COALESCE($7, storage),
+                status = COALESCE($8, status),
                 updated_at = now()
-            WHERE id = $8 AND household_id = $9
+            WHERE id = $9 AND household_id = $10
             RETURNING *`,
-            [name ?? null, food_type_id ?? null, quantity ?? null, unit ?? null, expiry_date ?? null, 
+            [name ?? null, food_type_id ?? null, quantity ?? null, unit ?? null, added_date ?? null, expiry_date ?? null,
                 storage ?? null, status ?? null, req.params.id, householdId]
         );
         if (updateRes.rows.length === 0) {
