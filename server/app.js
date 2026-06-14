@@ -27,7 +27,7 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 
-app.get('/api/v1/db-check', async (req, res) => {     // ← ADD THIS WHOLE ROUTE
+app.get('/api/v1/db-check', async (req, res) => {    
   try {
     const result = await pool.query('SELECT now()');
     res.json({ connected: true, time: result.rows[0].now });

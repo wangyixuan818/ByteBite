@@ -2,9 +2,10 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "bite": "node --watch index.js"
+    "bite": "node --watch server.js",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
