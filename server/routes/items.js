@@ -106,7 +106,7 @@ router.post('/', async (req, res) => {
                 expiryIsEstimated = true;   // set flag to true
             }
         }
-        
+
         // end of automatic expiry logic
 
         
@@ -184,14 +184,15 @@ router.patch('/:id', async (req, res) => {
         const householdId = await getHouseholdId(req.user.userId);
         const updateRes = await pool.query(
             `UPDATE items SET
-            name = COALESCE($1, name),
-            food_type_id = COALESCE($2, food_type_id),
-            quantity = COALESCE($3, quantity),
-            unit = COALESCE($4, unit),
-            expiry_date = COALESCE($5, expiry_date),
-            expiry_is_estimated = CASE WHEN $5::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
-            storage = COALESCE($6, storage),
-            status = COALESCE($7, status)
+                name = COALESCE($1, name),
+                food_type_id = COALESCE($2, food_type_id),
+                quantity = COALESCE($3, quantity),
+                unit = COALESCE($4, unit),
+                expiry_date = COALESCE($5, expiry_date),
+                expiry_is_estimated = CASE WHEN $5::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
+                storage = COALESCE($6, storage),
+                status = COALESCE($7, status)
+                updated_at = now()
             WHERE id = $8 AND household_id = $9
             RETURNING *`,
             [name ?? null, food_type_id ?? null, quantity ?? null, unit ?? null, expiry_date ?? null, 
@@ -237,3 +238,5 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.createItemSchema = createItemSchema;
+module.exports.updateItemSchema = updateItemSchema;
