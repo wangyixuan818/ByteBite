@@ -1,9 +1,9 @@
 // set up the test for /api/v1/auth endpoints
 
 const request = require('supertest');
-const app = require('../app');
-const pool = require('../db');
-const { cleanDatabase } = require('./helpers/db');
+const app = require('../../app');
+const pool = require('../../db');
+const { cleanDatabase } = require('../helpers/db');
 
 // clean database before each test
 beforeEach(async () => {
