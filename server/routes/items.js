@@ -84,8 +84,8 @@ router.post('/', async (req, res) => {
                 shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days; 
             }
     
-
-            if (!shelfLifeDays && name) { // try to search by name
+            // try to search by name
+            if (!shelfLifeDays && name) { 
                 // look for partial match as well but prioritise exact match first
                 const foodTypeRes = await pool.query(
                     `SELECT default_shelf_life_days 
