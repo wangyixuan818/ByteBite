@@ -3,6 +3,7 @@ const { z } = require('zod');
 const pool = require('../db');
 const reqAuth = require('../middleware/auth');
 const { formatDate, todayDate, addDays } = require('../helpers/date');
+const { autoEstimateShelfLife, pickShelfLife } = require('../helpers/auto-expiry');
 
 const router = express.Router();
 router.use(reqAuth);
@@ -38,9 +39,16 @@ router.get('/', async (req, res) => {
 
 const createItemSchema = z.object({
     name: z.string().min(1),
-    food_type_id: z.number().int().optional(),
+
+    // ids
+    food_type_id: z.number().int().positive().optional(),
+    brand_product_id: z.string().optional,
+    category_id: z.number().int().positive().optional,
+    brand: z.string().optional(),
+
+    // standard deets
     quantity: z.number().int().positive().optional(),
-    unit: z.string().max(50).optional(),
+    unit: z.string().positive().max(50).optional(),
     added_date: z.string().optional(), // YYYY-MM-DD
     expiry_date: z.string().optional(), // YYYY-MM-DD
     storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
@@ -59,7 +67,9 @@ router.post('/', async (req, res) => {
         }});
     }
 
-    const { name, food_type_id, quantity, unit, added_date, expiry_date, storage } = parsed.data;
+    const { name, 
+                food_type_id, brand_product_id, category_id, brand,
+                quantity, unit, added_date, expiry_date, storage } = parsed.data;
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
@@ -67,16 +77,61 @@ router.post('/', async (req, res) => {
         // let added_date fall back to current date if not provided
         const finalAddedDate = added_date ?? todayDate();
 
-        // inserting the automatic expiry logic here
         let resolvedExpiryDate = expiry_date ?? null;
         let expiryIsEstimated = false;
+        let finalStorage = storage ?? null; // auto fall back if not defined
 
+        // inserting the automatic expiry logic here 
+        // runs only if no expiry date added
         if (!resolvedExpiryDate) {
+            // estimated expiry duration
+            let shelfLifeDays = null;
+            // default storage location
+            let catalogStorage = null;
+
+            // flags
+            let matchedBrandId = null;
+            let matchedFoodTypeId = null;
+
+
+            // most specific: match a brand
+            const brandRes = await pool.query(
+                `SELECT bp.id, bp.food_type_id, bp.fridge_days, bp.pantry_days, bp.freezer_days, bp.default_storage
+                FROM brand_products bp
+                JOIN food_types ft ON ft.id = bp.food_type_id
+                WHERE $1 ILIKE '%' || bp.brand || '%' AND $1 ILIKE '%' || ft.name || '%'
+                LIMIT 1`,
+                [name]
+            );
+        }
+
+
+
+
+        ///// OLD LOGIC //////
+
+        /* if (!resolvedExpiryDate) {
             // if no expiry date provided this will try to estimate based on food type
             let shelfLifeDays = null;
+            let matchedBrandProductId = null; // tracks if we got match the brand
 
-            if (food_type_id) {
-                // query the food type's average shelf life if it exists in the database
+
+            // best case: hv food type & brand
+            if (brand && food_type_id) {
+                // query the food type's brand expiry duration
+                const res = await pool.query(
+                    `SELECT id, fridge_days, pantry_days, freezer_days 
+                    FROM brand_products WHERE LOWER(brand) = LOWER($1) AND food_type_id = $2
+                    LIMIT 1`,
+                    [brand, food_type_id]
+                );
+                shelfLifeDays = pickShelfLife(res.rows[0], storage); 
+                if (shelfLifeDays !== null) matchedBrandProductId = res.rows[0].id;
+            }
+
+            // if have brand and name
+            if (brand && food_type_id) {
+                // query the food type's brand expiry duration
                 const foodTypeRes = await pool.query(
                     `SELECT default_shelf_life_days FROM food_types WHERE id = $1`,
                     [food_type_id]
@@ -107,7 +162,7 @@ router.post('/', async (req, res) => {
             if (shelfLifeDays) {
                 resolvedExpiryDate = addDays(finalAddedDate, shelfLifeDays);
                 expiryIsEstimated = true;   // set flag to true
-            }
+            } */
         }
 
         // end of automatic expiry logic
