@@ -1,4 +1,4 @@
-ByteBite API Contract — Milestone 1
+ByteBite API Contract: Milestone 2
 
 ### Global conventions
 - Base URL (dev): `http://localhost:5001/api/v1`
@@ -23,7 +23,7 @@ Create an account. The server auto-creates a default household for the new user 
 - Errors: 401 `INVALID_USER`, `INVALID_PASSWORD`
 400 `VALIDATION_ERROR`
 
-### POST /v1/auth/logout  (auth required)
+### POST /auth/logout  (auth required)
 For pure-JWT, the client just discards the token; this endpoint exists for symmetry/future revocation.
 - 204 No Content
 
@@ -32,10 +32,26 @@ Returns the currently logged-in user.
 - 200: `{ "user": { "id", "email", "display_name" } }`
 - Errors: 401 `UNAUTHENTICATED`
 
-## Food Types  (reference data — powers auto-expiry & category filtering)
+
+
+## Catalog  (reference data — powers cascading auto-expiry & category filtering)
+
+The catalog is a three-tier hierarchy: **categories > food_types (products) > brand_products (brand variants)**. Each tier carries per-storage shelf-life values (`pantry_days`, `fridge_days`, `freezer_days`) and an optional `default_storage` suggesting where the item is typically kept. The POST /items handler cascades through the tiers (brand > product > category) when computing auto-expiry.
+
+### GET /categories  (auth required)
+List all food categories. Used by the frontend to populate the category dropdown.
+- 200: `[ <category>, ... ]`
 
 ### GET /food-types  (auth required)
-- 200: `[ { "id", "name": "Milk", "category": "Dairy", "default_shelf_life_days": 7 }, ... ]`
+List all food types (products). Used by the frontend to populate the food-type dropdown.
+- Optional query param: `?category_id=N` to filter by category.
+- 200: `[ <food_type>, ... ]`
+
+### GET /brand-products  (auth required)
+List all brand variants. Used by the frontend to populate the brand dropdown.
+- Optional query param: `?food_type_id=N` to filter by product.
+- 200: `[ <brand_product>, ... ]`
+
 
 ## Food Items  (scoped to current user's household — determined server-side)
 
@@ -45,8 +61,8 @@ List items in the user's household.
 - 200: `[ <item>, ... ]`
 
 ### POST /items  (auth required)
-Add an item. If `expiry_date` is omitted, the server tries to auto-fill from `food_types` (matched by `food_type_id`, or by case-insensitive `name`). On match → sets `expiry_is_estimated=true`. On no match → `expiry_date` stays null.
-- Request: `{ "name": string (required), "food_type_id"?: number, "quantity"?: number, "unit"?: string, "added_date"?: ISO date (default today), "expiry_date"?: ISO date, "storage"?: "fridge" | "pantry" | "freezer" | “fridge door” | “fresh zone” }`
+Add an item. If `expiry_date` is omitted, the server runs a **cascading auto-expiry lookup** across the catalog hierarchy: it tries the brand_products tier first (most specific), then falls back to food_types (product), then to categories (most general). On any match it computes `expiry_date = added_date + shelf_life_days` (picking the right `pantry_days` / `fridge_days` / `freezer_days` based on `storage`) and sets `expiry_is_estimated=true`. On no match, `expiry_date` stays null. If `storage` is omitted, the server fills it in from the matched catalog row's `default_storage`. The matched `brand_product_id` and/or `food_type_id` are persisted on the item.
+- Request: `{ "name": string (required), "food_type_id"?: number, "brand_product_id"?: number, "category_id"?: number, "brand"?: string, "quantity"?: number, "unit"?: string, "added_date"?: ISO date (default today), "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone" }`
 - 201: `{ "item": <item> }`
 - Errors: 400 `VALIDATION_ERROR`
 
@@ -55,8 +71,9 @@ Add an item. If `expiry_date` is omitted, the server tries to auto-fill from `fo
 - Errors: 404 `NOT_FOUND` (also if the item belongs to a different household)
 
 ### PATCH /items/:id  (auth required)
-Update any subset of fields, plus `"status": "active" | "consumed" | "removed" | "expired"`.
+Update any subset of fields. Accepts the same fields as POST (`name`, `food_type_id`, `brand_product_id`, `category_id`, `brand`, `quantity`, `unit`, `added_date`, `expiry_date`, `storage`), plus `"status": "active" | "consumed" | "removed" | "expired"`. Manually setting `expiry_date` flips `expiry_is_estimated` to `false`.
 - 200: `{ "item": <item> }`
+- Errors: 404 `NOT_FOUND`
 
 ### DELETE /items/:id  (auth required)
 Hard delete (we'll revisit if Usage Analytics gets added).
@@ -67,21 +84,63 @@ Hard delete (we'll revisit if Usage Analytics gets added).
 {
   "id": 42,
   "household_id": 1,
-  "name": "Milk",
+  "name": "HL Milk",
   "food_type_id": 12,
+  "brand_product_id": 5,
   "quantity": 1,
   "unit": "carton",
   "added_date": "2026-05-20",
-  "expiry_date": "2026-05-27",
+  "expiry_date": "2026-05-25",
   "expiry_is_estimated": true,
   "status": "active",
   "storage": "fridge",
-  // "fridge_id": 1, for later milestone
   "created_by": 3,
   "created_at": "2026-05-20T08:30:00Z",
   "updated_at": "2026-05-20T08:30:00Z"
 }
+```
 
+`brand_product_id` is the catalog row that matched the user's input, or `null` if the auto-expiry didn't find a brand-specific match (only a product or category match). Persisting it makes future features (filter by brand, brand-specific analytics) possible.
+
+## The `<category>` object
+```json
+{
+  "id": 1,
+  "name": "Dairy",
+  "default_storage": "fridge",
+  "pantry_days": null,
+  "fridge_days": 7,
+  "freezer_days": 180
+}
+```
+
+## The `<food_type>` object
+```json
+{
+  "id": 12,
+  "name": "Milk",
+  "category_id": 1,
+  "default_storage": "fridge",
+  "pantry_days": null,
+  "fridge_days": 7,
+  "freezer_days": 90
+}
+```
+
+## The `<brand_product>` object
+```json
+{
+  "id": 5,
+  "brand": "HL",
+  "food_type_id": 12,
+  "default_storage": "fridge",
+  "pantry_days": null,
+  "fridge_days": 5,
+  "freezer_days": 90
+}
+```
+
+The per-storage `*_days` fields may be `null` if that storage location isn't applicable for the food (e.g. milk has no `pantry_days`). When all three are null on a row, the cascade falls through to the next tier in the hierarchy.
 
 
 

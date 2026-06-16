@@ -8,11 +8,37 @@ Table households {
   created_at timestamptz [not null]
 }
 
+Table categories {
+  id bigint [primary key]
+  name text [not null, unique]
+  default_storage text [not null]
+  pantry_days integer
+  fridge_days integer
+  freezer_days integer
+  created_at timestamptz [not null]
+}
+
 Table food_types {
   id bigint [primary key]
   name text [not null, unique]
-  category text
-  default_shelf_life_days integer [not null]
+  category_id bigint
+  default_storage text
+  pantry_days integer
+  fridge_days integer
+  freezer_days integer
+}
+
+Table brand_products {
+  id bigint [primary key]
+  brand text [not null]
+  food_type_id bigint [not null]
+  default_storage text
+  pantry_days integer
+  fridge_days integer
+  freezer_days integer
+  created_at timestamptz [not null]
+  
+  Note: 'unique (brand, food_type_id) -- one row per (brand, product) pair'
 }
 
 Table users {
@@ -30,13 +56,14 @@ Table user_household {
   role text [not null, note: "check (role in ('owner','member'))"]
   created_at timestamptz [not null]
   
-  Note: 'unique (user_id, household_id) - a user cant join the same household twice'
+  Note: 'unique (user_id, household_id), a user cant join the same household twice'
 }
 
 Table items {
   id bigint [primary key]
   household_id bigint [not null]
   name text [not null]
+  brand_product_id bigint
   food_type_id bigint
   quantity numeric
   unit text
@@ -44,7 +71,7 @@ Table items {
   expiry_date date
   expiry_is_estimated boolean [not null]
   status text [not null, note: "check (status in ('active','consumed','removed','expired'))"]
-  storage text [note: "check (storage in ('fridge','pantry','freezer'))"]
+  storage text [note: "check (storage in ('fridge','pantry','freezer', 'fridge door', 'fresh zone'))"]
   created_by bigint
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -57,4 +84,9 @@ Ref: user_household.household_id > households.id // many-to-one
 // Relationships for items
 Ref: items.household_id > households.id // many-to-one
 Ref: items.food_type_id > food_types.id // many-to-one
+Ref: items.brand_product_id > brand_products.id // many-to-one
 Ref: items.created_by > users.id // many-to-one
+
+// Relationships for the hierarchy (auto-expiry)
+Ref: food_types.category_id > categories.id // many-to-one
+Ref: brand_products.food_type_id > food_types.id // many-to-one

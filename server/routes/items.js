@@ -3,7 +3,7 @@ const { z } = require('zod');
 const pool = require('../db');
 const reqAuth = require('../middleware/auth');
 const { formatDate, todayDate, addDays } = require('../helpers/date');
-const { autoEstimateShelfLife, pickShelfLife } = require('../helpers/auto-expiry');
+const { pickDays } = require('../helpers/auto-expiry');
 
 const router = express.Router();
 router.use(reqAuth);
@@ -42,13 +42,13 @@ const createItemSchema = z.object({
 
     // ids
     food_type_id: z.number().int().positive().optional(),
-    brand_product_id: z.string().optional,
-    category_id: z.number().int().positive().optional,
+    brand_product_id: z.number().int().positive().optional(),
+    category_id: z.number().int().positive().optional(),
     brand: z.string().optional(),
 
     // standard deets
     quantity: z.number().int().positive().optional(),
-    unit: z.string().positive().max(50).optional(),
+    unit: z.string().max(50).optional(),
     added_date: z.string().optional(), // YYYY-MM-DD
     expiry_date: z.string().optional(), // YYYY-MM-DD
     storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
@@ -69,7 +69,8 @@ router.post('/', async (req, res) => {
 
     const { name, 
                 food_type_id, brand_product_id, category_id, brand,
-                quantity, unit, added_date, expiry_date, storage } = parsed.data;
+                quantity, unit, added_date, expiry_date, storage } 
+                    = parsed.data;
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
@@ -81,101 +82,168 @@ router.post('/', async (req, res) => {
         let expiryIsEstimated = false;
         let finalStorage = storage ?? null; // auto fall back if not defined
 
+        // estimated expiry duration
+        let shelfLifeDays = null;
+        // default storage location
+        let catalogStorage = null;
+
+        // flags
+        let matchedBrandId = brand_product_id ?? null;
+        let matchedFoodTypeId = food_type_id ?? null;
+
         // inserting the automatic expiry logic here 
         // runs only if no expiry date added
         if (!resolvedExpiryDate) {
-            // estimated expiry duration
-            let shelfLifeDays = null;
-            // default storage location
-            let catalogStorage = null;
+            let shelfLifeRow = null; // stores entire row retrieved
 
-            // flags
-            let matchedBrandId = null;
-            let matchedFoodTypeId = null;
+            // path 1: explicit IDs given
+            if (brand_product_id) {
+                // go straight to lowest lvl query
+                const r = await pool.query(
+                    `SELECT fridge_days, pantry_days, freezer_days, default_storage, food_type_id
+                    FROM brand_products WHERE id = $1`,
+                    [brand_product_id]
+                );
+                if (r.rows[0]) {
+                    shelfLifeRow = r.rows[0];
+                    matchedBrandId = brand_product_id;
+                    matchedFoodTypeId = r.rows[0].food_type_id;
+                } else {
+                    matchedBrandId = null;
+                }
+            }
+
+            // path 2: User picked a product, maybe with a brand text
+            if (!shelfLifeRow && food_type_id) {
+                // lowest lvl: check if there is a brand variant matching the typed brand
+                if (brand) {
+                    const r = await pool.query(
+                        `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
+                        FROM brand_products
+                        WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2)`,
+                        [food_type_id, brand]
+                    );
+                    if (r.rows[0]) {
+                        shelfLifeRow = r.rows[0];
+                        matchedBrandId = r.rows[0].id;
+                        matchedFoodTypeId = food_type_id;
+                    }
+                }
+
+                // otherwise we just use the product itself
+                if (!shelfLifeRow) {
+                    const ftRes = await pool.query(
+                        `SELECT category_id, fridge_days, pantry_days, freezer_days, default_storage
+                        FROM food_types WHERE id = $1`,
+                        [food_type_id]
+                    );   
+                    if (ftRes.rows[0]) {
+                        shelfLifeRow = ftRes.rows[0];
+                        matchedFoodTypeId = food_type_id;
+
+                        // check if this food type has expiry duration for storage:
+                        if (pickDays(ftRes.rows[0], finalStorage ?? ftRes.rows[0].default_storage) === null 
+                            && ftRes.rows[0].category_id) {
+                            const c = await pool.query(
+                                `SELECT fridge_days, pantry_days, freezer_days, default_storage
+                                FROM categories WHERE id = $1`,
+                                [ftRes.rows[0].category_id]
+                            );
+                            if (c.rows[0]) shelfLifeRow = c.rows[0]; 
+                        }
+                    }
+                }
+            }
+
+            // Path 3: user only gave a category
+            if (!shelfLifeRow && category_id) {
+                const r = await pool.query(
+                    `SELECT fridge_days, pantry_days, freezer_days, default_storage
+                    FROM categories WHERE id = $1`,
+                    [category_id]
+                );
+                if (r.rows[0]) shelfLifeRow = r.rows[0];
+            }
 
 
-            // most specific: match a brand
-            const brandRes = await pool.query(
-                `SELECT bp.id, bp.food_type_id, bp.fridge_days, bp.pantry_days, bp.freezer_days, bp.default_storage
-                FROM brand_products bp
-                JOIN food_types ft ON ft.id = bp.food_type_id
-                WHERE $1 ILIKE '%' || bp.brand || '%' AND $1 ILIKE '%' || ft.name || '%'
-                LIMIT 1`,
-                [name]
-            );
-        }
 
-
-
-
-        ///// OLD LOGIC //////
-
-        /* if (!resolvedExpiryDate) {
-            // if no expiry date provided this will try to estimate based on food type
-            let shelfLifeDays = null;
-            let matchedBrandProductId = null; // tracks if we got match the brand
-
-
-            // best case: hv food type & brand
-            if (brand && food_type_id) {
-                // query the food type's brand expiry duration
-                const res = await pool.query(
-                    `SELECT id, fridge_days, pantry_days, freezer_days 
-                    FROM brand_products WHERE LOWER(brand) = LOWER($1) AND food_type_id = $2
+            // path 4: only string text given, no explicit brand or category indicated
+            // most flexible search
+            if (!shelfLifeRow) {
+                // lowest tier first: try to match a brand_product
+                const brandRes = await pool.query(
+                    // reverse to check if the row contains this item i am searching for
+                    `SELECT bp.id, bp.food_type_id, bp.fridge_days, bp.pantry_days, bp.freezer_days, bp.default_storage
+                    FROM brand_products bp
+                    JOIN food_types ft ON ft.id = bp.food_type_id
+                    WHERE $1 ILIKE '%' || bp.brand || '%' AND $1 ILIKE '%' || ft.name || '%'
                     LIMIT 1`,
-                    [brand, food_type_id]
-                );
-                shelfLifeDays = pickShelfLife(res.rows[0], storage); 
-                if (shelfLifeDays !== null) matchedBrandProductId = res.rows[0].id;
-            }
-
-            // if have brand and name
-            if (brand && food_type_id) {
-                // query the food type's brand expiry duration
-                const foodTypeRes = await pool.query(
-                    `SELECT default_shelf_life_days FROM food_types WHERE id = $1`,
-                    [food_type_id]
-                );
-                shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days; 
-            }
-    
-            // try to search by name
-            if (!shelfLifeDays && name) { 
-                // look for partial match as well but prioritise exact match first
-                const foodTypeRes = await pool.query(
-                    `SELECT default_shelf_life_days 
-                    FROM food_types 
-                    WHERE name ILIKE '%' || $1 || '%'
-                    ORDER BY
-                        CASE
-                            WHEN LOWER(name) = LOWER($1) THEN 1            -- exact match gets highest priority
-                            WHEN LOWER(name) LIKE '%' || LOWER($1) || '%' THEN 2   
-                                            -- partial match gets second priority; %word% finds all match of word
-                            ELSE 3
-                        END
-                    LIMIT 1`, // limit 1 to faster a bit
                     [name]
                 );
-                shelfLifeDays = foodTypeRes.rows[0]?.default_shelf_life_days;
+
+                if (brandRes.rows[0]) {
+                    const row = brandRes.rows[0];
+                    shelfLifeRow = row;
+                    matchedBrandId = row.id;
+                    matchedFoodTypeId = row.food_type_id;
+                }
+
+                // second tier: fall back to food_type match (product level)
+                if (!shelfLifeRow) {
+                    const ftRes = await pool.query(
+                        `SELECT id, category_id, fridge_days, pantry_days, freezer_days, default_storage
+                        FROM food_types
+                        WHERE $1 ILIKE '%' || name || '%'
+                        ORDER BY LENGTH(name) DESC
+                        LIMIT 1`,
+                        [name]
+                    );
+
+                    if (ftRes.rows[0]) {
+                        const row = ftRes.rows[0];
+                        shelfLifeRow = row;
+                        matchedFoodTypeId = row.id;
+
+                        // if product had no days for this storage, fall back to its category
+                        if (pickDays(row, finalStorage ?? row.default_storage) === null && row.category_id) {
+                            const catRes = await pool.query(
+                                `SELECT fridge_days, pantry_days, freezer_days, default_storage
+                                FROM categories WHERE id = $1`,
+                                [row.category_id]
+                            );
+                            if (catRes.rows[0]) {
+                                shelfLifeRow = catRes.rows[0];
+                            }
+                        }
+                    }
+                }
             }
 
-            if (shelfLifeDays) {
-                resolvedExpiryDate = addDays(finalAddedDate, shelfLifeDays);
-                expiryIsEstimated = true;   // set flag to true
-            } */
+            if (shelfLifeRow && shelfLifeDays === null) {
+                catalogStorage = catalogStorage ?? shelfLifeRow.default_storage;
+                shelfLifeDays = pickDays(shelfLifeRow, finalStorage ?? catalogStorage);
+            }
+        }
+
+        if (!finalStorage) finalStorage = catalogStorage;
+
+        // Compute the expiry date
+        if (shelfLifeDays !== null) {
+            resolvedExpiryDate = addDays(finalAddedDate, shelfLifeDays);
+            expiryIsEstimated = true;
         }
 
         // end of automatic expiry logic
 
-        
+
 
         const insertRes = await pool.query(
             `INSERT INTO items
-            (household_id, name, food_type_id, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)  
+            (household_id, name, food_type_id, brand_product_id, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)  
             RETURNING *`,
-            [householdId, name, food_type_id ?? null, quantity ?? null, unit ?? null, finalAddedDate,
-                resolvedExpiryDate, expiryIsEstimated, storage ?? null, req.user.userId] // updated to resolvedExpiryDate and included flag for estimated expiry
+            [householdId, name, matchedFoodTypeId, matchedBrandId, quantity ?? null, unit ?? null, finalAddedDate,
+                resolvedExpiryDate, expiryIsEstimated, finalStorage ?? null, req.user.userId]
         );
         return res.status(201).json({ item: insertRes.rows[0] });
     } catch (err) {
