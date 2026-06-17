@@ -1,3 +1,4 @@
+// defines the app
 require('dotenv').config();          
 
 const pool = require('./db');
@@ -26,7 +27,7 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 
-app.get('/api/v1/db-check', async (req, res) => {     // ← ADD THIS WHOLE ROUTE
+app.get('/api/v1/db-check', async (req, res) => {    
   try {
     const result = await pool.query('SELECT now()');
     res.json({ connected: true, time: result.rows[0].now });
@@ -36,17 +37,5 @@ app.get('/api/v1/db-check', async (req, res) => {     // ← ADD THIS WHOLE ROUT
   }
 });
  
-
-
-// to start the server
-const PORT = process.env.PORT || 5001;              
-app.listen(PORT, () => {                            
-  console.log(`Server running on http://localhost:${PORT}`);
-});
-
-
-
-// notes:
-// Port 5001 (http://localhost:5001): where Node/Express backend lives
-// It waits here for requests
-// Port 5173 (http://localhost:5173): where Vite frontend lives.
+// export the app
+module.exports = app;
