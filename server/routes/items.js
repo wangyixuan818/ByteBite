@@ -22,8 +22,23 @@ async function getHouseholdId(userId) {
 router.get('/', async (req, res) => {
     try {
         const householdId = await getHouseholdId(req.user.userId);
+        // add a tag to denote how many days they are from expiry
         const result = await pool.query(
-            `SELECT * FROM items WHERE household_id = $1 ORDER BY created_at DESC`,
+            `SELECT *,
+                (expiry_date - CURRENT_DATE)::int AS days_until_expiry,
+                CASE
+                    WHEN expiry_date IS NULL THEN 'no_date'
+                    WHEN (expiry_date - CURRENT_DATE)::int < 0 THEN 'expired'
+                    WHEN (expiry_date - CURRENT_DATE)::int = 0 THEN 'expiring_today'
+                    WHEN (expiry_date - CURRENT_DATE)::int <= 3 THEN 'expiring_soon'
+                    WHEN (expiry_date - CURRENT_DATE)::int <= 7 THEN 'expiring_this_week'
+                    ELSE 'ok'
+                END AS expiry_status
+            FROM items
+            WHERE household_id = $1 AND status = 'active'
+            ORDER BY
+                expiry_date ASC NULLS LAST,
+                created_at DESC`,
             [householdId]
         );
         return res.status(200).json(result.rows);
