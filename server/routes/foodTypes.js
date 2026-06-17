@@ -8,7 +8,8 @@ router.use(reqAuth);
 router.get('/', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, name, category, default_shelf_life_days 
+            `SELECT id, name, category_id, default_storage,
+                    pantry_days, fridge_days, freezer_days
             FROM food_types 
             ORDER BY name`);
         return res.status(200).json(result.rows);
