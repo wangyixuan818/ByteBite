@@ -1,4 +1,4 @@
--- ByteBite: initial database schema (Milestone 1)
+-- ByteBite: database schema
 -- Apply to a fresh Supabase Postgres database via the SQL Editor
 
 
