@@ -77,6 +77,19 @@ Table items {
   updated_at timestamptz [not null]
 }
 
+Table notifications {
+  id bigint [primary key]
+  user_id bigint [not null]
+  item_id bigint
+  type text [not null, note: "check (type in ('expiring_soon','expiring_today'))"]
+  message text [not null]
+  notification_date date [not null]
+  read_at timestamptz
+  created_at timestamptz [not null]
+  
+  Note: 'unique (user_id, item_id, type, notification_date), one notification per item per type per day'
+}
+
 // Relationships for user_household
 Ref: user_household.user_id > users.id // many-to-one
 Ref: user_household.household_id > households.id // many-to-one
@@ -90,3 +103,7 @@ Ref: items.created_by > users.id // many-to-one
 // Relationships for the hierarchy (auto-expiry)
 Ref: food_types.category_id > categories.id // many-to-one
 Ref: brand_products.food_type_id > food_types.id // many-to-one
+
+// Relationships for notifications
+Ref: notifications.user_id > users.id // many-to-one
+Ref: notifications.item_id > items.id // many-to-one (nullable, cascades on delete)

@@ -93,6 +93,22 @@ create table items (
 );
 
 
+-- 8. notifications: in-app alerts surfaced on the dashboard
+create table notifications (
+  id                bigint generated always as identity primary key,
+  user_id           bigint not null references users(id) on delete cascade,
+  item_id           bigint references items(id) on delete cascade,
+  type              text not null check (type in ('expiring_soon', 'expiring_today')),
+  message           text not null,
+  notification_date date not null default current_date,
+  read_at           timestamptz,
+  created_at        timestamptz not null default now(),
+  unique (user_id, item_id, type, notification_date)
+);
+
+alter table notifications enable row level security;
+
+
 
 -- Row-Level Security
 -- Enabled on every table
