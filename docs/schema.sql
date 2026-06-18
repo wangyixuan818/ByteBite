@@ -120,3 +120,4 @@ alter table user_household enable row level security;
 alter table items          enable row level security;
 alter table categories     enable row level security;
 alter table brand_products enable row level security;
+alter table notifications enable row level security;
