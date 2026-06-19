@@ -34,7 +34,7 @@ export default function ItemCard({ item, onItemDeleted }) {
 
     const handleDelete = async () => {
         try {
-            await deleteItem(item.id);
+            await deleteItem(item.id); // API contract change: DELETE /items/:id returns 204 No Content, so no response body is read.
             onItemDeleted();
         } catch (err) {
             console.error(err);

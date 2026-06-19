@@ -35,7 +35,7 @@
 
             navigate('/dashboard');
         } catch (err) {
-            const code = err.response?.data?.error.code;
+            const code = err.response?.data?.error?.code; // API contract change: non-2xx responses wrap details in error.code.
             if (code === "VALIDATION_ERROR") {
                 setError("Please make sure your email address is valid.");
             } else if (code === "EMAIL_ALREADY_EXISTS") {

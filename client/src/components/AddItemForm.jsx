@@ -1,4 +1,4 @@
-    import { addItem, getFoodTypes } from '../api/item';
+    import { addItem, getCategories, getFoodTypes } from '../api/item';
     import { useEffect, useState } from "react";
 
     export const AddItemForm = ({ onItemAdded }) => {
@@ -6,20 +6,25 @@
         const [name, setName] = useState("");
         const [quantity, setQuantity] = useState(1);
         const [unit, setUnit] = useState("");
-        const [storage, setStorage] = useState("fridge"); // TODO: change after categories are updated 
-        const [expiryDate, setExpiryDate] = useState(""); //idk how to assign date format
+        const [storage, setStorage] = useState(""); // API contract change: omit storage so the server can use catalog default_storage.
+        const [expiryDate, setExpiryDate] = useState(""); // API contract change: blank expiry lets the server calculate auto-expiry.
+        const [categoryList, setCategoryList] = useState([]);
         const [foodTypeList, setFoodTypeList] = useState([]);
         useEffect(() => {
-            getFoodTypes().then(res => setFoodTypeList(res.data));
+            Promise.all([getCategories(), getFoodTypes()]) // API contract change: categories are no longer embedded on food types.
+                .then(([categoryRes, foodTypeRes]) => {
+                    setCategoryList(categoryRes.data);
+                    setFoodTypeList(foodTypeRes.data);
+                })
+                .catch(() => setError("Failed to load food categories. Please try again."));
         }, [])
-        const uniqueCategories = [...new Set(foodTypeList.map(item => item.category))];
         const [selectedCategory, setSelectedCategory] = useState(null);
         const [selectedFoodType, setSelectedFoodType] = useState(null);
-        const filteredFoodTypes = foodTypeList.filter(ft => ft.category === selectedCategory);
+        const filteredFoodTypes = foodTypeList.filter(ft => ft.category_id === selectedCategory?.id); // API contract change: filter by category_id.
         const [error, setError] = useState("");
         const formState = {name, setName, quantity, setQuantity, unit, setUnit, 
             storage, setStorage, expiryDate, setExpiryDate, 
-            foodTypeList, setFoodTypeList, uniqueCategories, 
+            foodTypeList, setFoodTypeList, categoryList, 
             selectedCategory, setSelectedCategory, selectedFoodType, setSelectedFoodType, filteredFoodTypes
         }
 
@@ -32,8 +37,9 @@
                     name,
                     quantity,
                     unit: unit || undefined, 
-                    storage,
-                    expiry_date: expiryDate || undefined,
+                    storage: storage || undefined, // API contract change: undefined allows backend default_storage fallback.
+                    expiry_date: expiryDate || undefined, // API contract change: undefined triggers backend auto-expiry lookup.
+                    category_id: selectedCategory?.id, // API contract change: category_id is part of the new catalog hierarchy.
                     food_type_id: isCustom ? undefined: Number(selectedFoodType?.id),
                 });
                 onItemAdded();
@@ -81,9 +87,7 @@
         useEffect(() => {
             if (selectedFoodType) {
                 setName(selectedFoodType.name);
-                let date = new Date();
-                date.setDate(date.getDate() + selectedFoodType.default_shelf_life_days);
-                setExpiryDate(date.toISOString().split('T')[0]); 
+                setExpiryDate(""); // API contract change: default_shelf_life_days was removed; backend now estimates expiry.
             }
         }, [selectedFoodType])
 
@@ -96,14 +100,13 @@
                 <input type="text" value={unit} placeholder="Unit" onChange={e => setUnit(e.target.value)}/>
                 <br />
                 <select value={storage} onChange={e => setStorage(e.target.value)}>
-                    <option value="" disabled hidden>Store in...</option>
+                    <option value="">Use default storage</option>
                     <option value="fridge">Fridge</option>
                     <option value="fresh zone">Fresh Zone</option>
                     <option value="freezer">Freezer</option>
                     <option value="fridge door">Fridge Door</option>
                     <option value="pantry">Pantry</option>
                 </select>
-                {/*TODO: update the options after categories for storage are changed (according to discussion) */}
                 <br />
                 <input type="date" value={expiryDate} placeholder="Expiry date" onChange={e => setExpiryDate(e.target.value)} />
                 <br />
@@ -114,21 +117,24 @@
 
     // if the user chooses to use exisiting food types
     function ExistingItems({ formState = {} , handleRequest }) {
-        const {foodTypeList, setFoodTypeList, uniqueCategories, 
+        const {categoryList, 
             selectedCategory, setSelectedCategory, selectedFoodType, setSelectedFoodType, filteredFoodTypes
         } = formState;
         // the category list to render
         const CategoryList = () => {
             return (
-                uniqueCategories.map(category => (
-                    <label key={category}>
+                categoryList.map(category => (
+                    <label key={category.id}>
                         <input
                             type="radio"
                             name="category"
-                            value={category}
-                            checked={selectedCategory === category}
-                            onChange={() => setSelectedCategory(category)}
-                        /> {category}
+                            value={category.id}
+                            checked={selectedCategory?.id === category.id}
+                            onChange={() => {
+                                setSelectedCategory(category); // API contract change: keep the category id for POST /items.
+                                setSelectedFoodType(null);
+                            }}
+                        /> {category.name}
                     </label>
                 ))
             )

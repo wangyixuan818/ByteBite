@@ -6,6 +6,11 @@ export const getFoodTypes = () => {
     return axios.get('/api/v1/food-types', { headers });
 }
 
+export const getCategories = () => {
+    const headers = getAuthHeader();
+    return axios.get('/api/v1/categories', { headers }); // new API contract change
+}
+
 export const getItemList = (params = {}) => {
     const headers = getAuthHeader();
 

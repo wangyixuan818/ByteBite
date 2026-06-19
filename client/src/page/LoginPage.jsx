@@ -34,7 +34,7 @@
             navigate('/dashboard');
         } catch (err) {
             console.log(err);
-            const code = err.response?.data?.error.code;
+            const code = err.response?.data?.error?.code; // API contract change: non-2xx responses wrap details in error.code.
             if (code === 'INVALID_USER') {
                 setError("Invalid user.");
             } else if (code === 'INVALID_PASSWORD') {
