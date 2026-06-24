@@ -11,6 +11,22 @@ export const getCategories = () => {
     return axios.get('/api/v1/categories', { headers }); // new API contract change
 }
 
+// Codex corrected add-food flow: these calls prepare the frontend for catalog creation.
+// TODO(backend): implement POST /categories, including optional multipart thumbnail handling.
+export const createCategory = ({ name, thumbnail }) => {
+    const headers = getAuthHeader();
+    const formData = new FormData();
+    formData.append('name', name);
+    if (thumbnail) formData.append('thumbnail', thumbnail);
+    return axios.post('/api/v1/categories', formData, { headers });
+}
+
+// TODO(backend): implement POST /food-types and return { food_type }.
+export const createFoodType = (data) => {
+    const headers = getAuthHeader();
+    return axios.post('/api/v1/food-types', data, { headers });
+}
+
 export const getItemList = (params = {}) => {
     const headers = getAuthHeader();
 

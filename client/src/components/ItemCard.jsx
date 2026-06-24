@@ -1,53 +1,29 @@
-import { deleteItem } from "../api/item";
+import { useNavigate } from 'react-router-dom';
+import { deleteItem } from '../api/item';
 
+const urgentStatuses = new Set(['expired', 'expiring_today', 'expiring_soon']);
+
+// Codex minimal UI pass: readable expiry state and item-specific suggestion path.
 export default function ItemCard({ item, onItemDeleted }) {
-    const cardStyle = {
-        border: '1px solid #ccc',
-        backgroundColor: '#84c765',
-        borderRadius: '8px',
-        padding: '1rem',
-        marginBottom: '0.5rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-    }
-
-    const nameStyle = {
-        fontWeight: 'bold',
-        fontSize: '1rem',
-        color: "#ffffff"
-    }
-
-    const expiryStyle = {
-        fontSize: '0.85rem',
-        color: '#ffffff',
-    }
-
-    const deleteButtonStyle = {
-        backgroundColor: '#000000',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        padding: '0.25rem 0.75rem',
-        cursor: 'pointer',
-    }
+    const navigate = useNavigate();
+    const urgent = urgentStatuses.has(item.expiry_status);
 
     const handleDelete = async () => {
-        try {
-            await deleteItem(item.id); // API contract change: DELETE /items/:id returns 204 No Content, so no response body is read.
-            onItemDeleted();
-        } catch (err) {
-            console.error(err);
-        }
-    }
+        if (!window.confirm(`Delete ${item.name}?`)) return;
+        await deleteItem(item.id);
+        onItemDeleted();
+    };
 
     return (
-        <div style={cardStyle}>
-            <div>
-                <p style={nameStyle}>{item.name}</p>
-            <p style={expiryStyle}>Expires: {item.expiry_date?.split('T')[0] ?? 'Unknown'}</p>
+        <article className={`item-card panel ${urgent ? 'urgent' : ''}`}>
+            <div className="item-main">
+                <div><h3>{item.name}</h3><p>{item.quantity ?? '—'} {item.unit || ''} · {item.storage || 'No storage set'}</p></div>
+                <div className="expiry-copy"><strong>{item.expiry_date?.split('T')[0] ?? 'No expiry date'}</strong><small>{item.expiry_is_estimated ? 'Estimated expiry' : 'Expiry date'}</small></div>
             </div>
-            <button style={deleteButtonStyle} onClick={handleDelete}>Delete Item</button>
-        </div>
+            <div className="button-row item-actions">
+                <button className="button secondary" onClick={() => navigate(`/dashboard/recipes?item=${item.id}`)}>How can I use this?</button>
+                <button className="button danger" onClick={handleDelete}>Delete</button>
+            </div>
+        </article>
     );
 }

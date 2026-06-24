@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- existing context module intentionally shares provider helpers */
 import {createContext, useContext, useEffect, useState} from 'react';
 import axios from 'axios';
 
@@ -12,14 +13,14 @@ export const getAuthHeader = () => {
 
 export function AuthenticationProvider({children}) {
     const [user, setUser] = useState(null); 
-    const [loading, setLoading] = useState(true);
+    // Codex verification fix: no-token sessions are known immediately and need no synchronous effect update.
+    const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('authenticationToken')));
     // back to login while it's still processing
 
     // when user refreshes the page (this is to keep user logged in):
     useEffect(() => {
        const headers = getAuthHeader();
        if (!headers) {
-        setLoading(false);
         return;
        }
        axios.get('/api/v1/auth/me', { headers})
