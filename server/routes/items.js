@@ -105,6 +105,7 @@ router.post('/', async (req, res) => {
         // flags
         let matchedBrandId = brand_product_id ?? null;
         let matchedFoodTypeId = food_type_id ?? null;
+        let matchedCategoryId = category_id ?? null;
 
         // inserting the automatic expiry logic here 
         // runs only if no expiry date added
@@ -123,6 +124,7 @@ router.post('/', async (req, res) => {
                     shelfLifeRow = r.rows[0];
                     matchedBrandId = brand_product_id;
                     matchedFoodTypeId = r.rows[0].food_type_id;
+                    matchedCategoryId = r.rows[0].category_id; 
                 } else {
                     matchedBrandId = null;
                 }
@@ -142,6 +144,7 @@ router.post('/', async (req, res) => {
                         shelfLifeRow = r.rows[0];
                         matchedBrandId = r.rows[0].id;
                         matchedFoodTypeId = food_type_id;
+                        matchedCategoryId = r.rows[0].category_id;
                     }
                 }
 
@@ -155,6 +158,7 @@ router.post('/', async (req, res) => {
                     if (ftRes.rows[0]) {
                         shelfLifeRow = ftRes.rows[0];
                         matchedFoodTypeId = food_type_id;
+                        matchedCategoryId = ftRes.rows[0].category_id;  // just capture it if exist
 
                         // check if this food type has expiry duration for storage:
                         if (pickDays(ftRes.rows[0], finalStorage ?? ftRes.rows[0].default_storage) === null 
@@ -177,7 +181,11 @@ router.post('/', async (req, res) => {
                     FROM categories WHERE id = $1`,
                     [category_id]
                 );
-                if (r.rows[0]) shelfLifeRow = r.rows[0];
+                if (r.rows[0]) {
+                    shelfLifeRow = r.rows[0];
+                } else {
+                    matchedCategoryId = null;   // bad id, discard it
+                }
             }
 
 
@@ -201,6 +209,7 @@ router.post('/', async (req, res) => {
                     shelfLifeRow = row;
                     matchedBrandId = row.id;
                     matchedFoodTypeId = row.food_type_id;
+                    matchedCategoryId = row.category_id;
                 }
 
                 // second tier: fall back to food_type match (product level)
@@ -218,6 +227,7 @@ router.post('/', async (req, res) => {
                         const row = ftRes.rows[0];
                         shelfLifeRow = row;
                         matchedFoodTypeId = row.id;
+                        matchedCategoryId = row.category_id;
 
                         // if product had no days for this storage, fall back to its category
                         if (pickDays(row, finalStorage ?? row.default_storage) === null && row.category_id) {
@@ -254,10 +264,10 @@ router.post('/', async (req, res) => {
 
         const insertRes = await pool.query(
             `INSERT INTO items
-            (household_id, name, food_type_id, brand_product_id, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)  
+            (household_id, name, food_type_id, brand_product_id, category_id, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)  
             RETURNING *`,
-            [householdId, name, matchedFoodTypeId, matchedBrandId, quantity ?? null, unit ?? null, finalAddedDate,
+            [householdId, name, matchedFoodTypeId, matchedBrandId, matchedCategoryId, quantity ?? null, unit ?? null, finalAddedDate,
                 resolvedExpiryDate, expiryIsEstimated, finalStorage ?? null, req.user.userId]
         );
         return res.status(201).json({ item: insertRes.rows[0] });

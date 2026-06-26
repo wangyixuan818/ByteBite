@@ -93,6 +93,7 @@ describe('Item endpoints', () => {
                 expect(res.body.item.expiry_date).toBe('2026-01-08');   // 2026-01-01 + 7 (from category)
                 expect(res.body.item.expiry_is_estimated).toBe(true);
                 expect(res.body.item.food_type_id).toBe(foodTypeId);    // still records which product
+                expect(res.body.item.category_id).toBe(categoryId);   // also persists the category link
             });
 
             // path 3: only a category given
@@ -108,6 +109,20 @@ describe('Item endpoints', () => {
                 expect(res.status).toBe(201);
                 expect(res.body.item.expiry_date).toBe('2026-01-08');   // 1 + 7
                 expect(res.body.item.expiry_is_estimated).toBe(true);
+            });
+
+            // path 3 with category persistence: category_id given should be stored on the item
+            test('persists category_id when only category_id is given', async () => {
+                const categoryId = await insertCategory({ name: 'Dairy', fridge_days: 7 });
+
+                const res = await request(app)
+                    .post('/api/v1/items')
+                    .set('Authorization', `Bearer ${token}`)
+                    .send({ name: 'Generic dairy thing', category_id: categoryId,
+                            added_date: '2026-01-01', storage: 'fridge' });
+
+                expect(res.status).toBe(201);
+                expect(res.body.item.category_id).toBe(categoryId);
             });
 
 
