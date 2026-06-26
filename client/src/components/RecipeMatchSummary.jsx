@@ -1,14 +1,24 @@
+import { useState } from 'react';
+
 export default function RecipeMatchSummary({ recipe }) {
-    // TODO: Show why this recipe was suggested, for example:
-    // "Uses 2 ingredients that expire this week".
-    // TODO: Optionally list the matched item names after matchRecipes returns them.
-    // TODO: Add accessible empty/fallback text when match metadata is unavailable.
-    if (!recipe?.matched_food_type_count) return null;
+    const [open, setOpen] = useState(false);
+    const matchedItems = recipe.matching_items ?? recipe.matched_items ?? [];
+
+    if (!matchedItems.length) return null;
 
     return (
-        <p>
-            Uses {recipe.matched_food_type_count} expiring ingredient
-            {recipe.matched_food_type_count === 1 ? "" : "s"}
-        </p>
+        <div className="recipe-match-summary">
+            <button className="text-button" type="button" onClick={() => setOpen(current => !current)}>
+                Uses {matchedItems.length} inventory item{matchedItems.length === 1 ? '' : 's'}
+            </button>
+
+            {open && (
+                <ul className="matched-item-list">
+                    {matchedItems.map(item => (
+                        <li key={item.id}>{item.name}</li>
+                    ))}
+                </ul>
+            )}
+        </div>
     );
 }

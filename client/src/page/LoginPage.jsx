@@ -49,17 +49,18 @@
         }
     }
     return (
-        /* Codex minimal UI pass: shared, readable authentication panel. */
-        <main className="auth-page">
-            <Link className="brand-link" to="/">ByteBite</Link>
-            <form className="panel form-stack auth-panel" onSubmit={handleRequest}>
-                <div><h1>Log in</h1><p>Welcome back to your fridge.</p></div>
-                {error ? <p className="message error" role="alert">{error}</p>: null}
-                <label>Email<input type='email' value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required /></label>
-                <label>Password<input type='password' value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" required /></label>
-                <button className="button" type='submit'>Log in</button>
-                <Link to="/signup">Don't have an account? Sign up</Link>
+        <div>
+            <h1>ByteBite</h1>
+            <form onSubmit={handleRequest}>
+                {error ? <p>{error}</p>: null}
+                <input type='email' value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required />
+                <br />
+                <input type='password' value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required />
+                <br />
+                <button type='submit'>Log In</button>
+                <br />
+                <Link to="/signup">Don't have an account yet? Sign up now</Link>
             </form>
-        </main>
+        </div>
     );
  }

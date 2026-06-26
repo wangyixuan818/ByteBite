@@ -5,7 +5,6 @@ const requireAuth = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-// Codex UI bridge: the API contract documented this read endpoint, but the route was missing.
 router.get('/', async (_req, res) => {
     try {
         const result = await pool.query(
@@ -17,6 +16,40 @@ router.get('/', async (_req, res) => {
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Something went wrong' } });
+    }
+});
+
+router.post('/', async(req, res) => {
+    const { name } = req.body;
+
+    if (!name || !name.trim()){
+        return res.status(400).json({
+            error: {
+                code: 'VALIDATION_ERROR',
+                message: 'Category name is required',
+            }
+        });
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO categories(name)
+             VALUES($1)
+             RETURNING id, name, default_storage, pantry_days, fridge_days, freezer_days`,
+             [name.trim()]
+        );
+
+        return res.status(201).json({
+            category: result.rows[0]
+        });
+    } catch(err) {
+        console.error(err);
+        return res.status(500).json({
+            error: {
+                code: 'SERVER_ERROR',
+                message: 'Something went wrong'
+            }
+        });
     }
 });
 

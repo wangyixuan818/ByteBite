@@ -5,7 +5,6 @@ import { getItemList } from '../api/item';
 import RecipeList from '../components/RecipeList';
 import { matchRecipes } from '../utils/matchRecipes';
 
-// Codex minimal UI pass: connect recipes to expiring inventory and item-specific entry points.
 export default function SuggestionPage() {
     const [searchParams] = useSearchParams();
     const [recipes, setRecipes] = useState([]);
@@ -16,20 +15,27 @@ export default function SuggestionPage() {
 
     useEffect(() => {
         Promise.all([getRecipeList(), getItemList()])
-            .then(([recipeData, itemResponse]) => { setRecipes(recipeData); setItems(itemResponse.data); })
+            .then(([recipeData, itemResponse]) => {
+                setRecipes(recipeData);
+                setItems(itemResponse.data);
+            })
             .catch(() => setError('Failed to get recipes. The recipe API may not be available yet.'))
             .finally(() => setLoading(false));
     }, []);
 
-    const selectedItem = items.find(item => item.id === itemId);
+    const selectedItem = items.find(item => Number(item.id) === itemId);
     const suggestions = useMemo(() => matchRecipes(items, recipes, 20, itemId || null), [items, recipes, itemId]);
 
     return (
         <main className="page-shell content-page">
             <nav className="topbar"><strong>ByteBite</strong><Link to="/dashboard">← Dashboard</Link></nav>
-            <header><p className="eyebrow">Food usage suggestions</p><h1>{selectedItem ? `Use ${selectedItem.name}` : 'What to make next'}</h1><p>Recipes are matched using food types in your inventory, with soon-to-expire food ranked first.</p></header>
+            <header>
+                <p className="eyebrow">Food usage suggestions</p>
+                <h1>{selectedItem ? `Use ${selectedItem.name}` : 'What to make next'}</h1>
+                <p>Recipes are matched using food types in your inventory, with soon-to-expire food ranked first.</p>
+            </header>
             {error && <p className="message error">{error}</p>}
-            {loading ? <p className="panel empty-state">Loading recipes…</p> : <RecipeList recipeList={suggestions.length ? suggestions : recipes} />}
+            {loading ? <p className="panel empty-state">Loading recipes...</p> : <RecipeList recipeList={suggestions.length ? suggestions : recipes} />}
         </main>
     );
 }

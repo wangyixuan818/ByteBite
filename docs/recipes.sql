@@ -27,9 +27,3 @@ create index recipe_food_types_food_type_id_idx
 
 alter table recipes enable row level security;
 alter table recipe_food_types enable row level security;
-
--- TODO: Verify food_type IDs against docs/hierarchicalCatalog.sql/database data.
--- TODO: Seed 10-15 recipes spanning the agreed cuisine_type values.
--- TODO: Insert one recipe_food_types row for every required food type.
--- TODO: Test that every seeded recipe has at least one junction-table row.
--- TODO (MS3): Decide whether recipes need created_by and moderation fields.

@@ -16,7 +16,6 @@ export default function LandingPage() {
         return <p>Loading...</p>;
     } else {
         return (
-            /* Codex minimal UI pass: landing-page structure from the approved handoff. */
             <main className="page-shell">
                 <nav className="topbar">
                     <strong>ByteBite</strong>

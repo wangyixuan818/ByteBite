@@ -13,7 +13,6 @@ export const getAuthHeader = () => {
 
 export function AuthenticationProvider({children}) {
     const [user, setUser] = useState(null); 
-    // Codex verification fix: no-token sessions are known immediately and need no synchronous effect update.
     const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('authenticationToken')));
     // back to login while it's still processing
 

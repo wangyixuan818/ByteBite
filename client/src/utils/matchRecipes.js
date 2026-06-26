@@ -1,16 +1,31 @@
-const urgentStatuses = new Set(['expired', 'expiring_today', 'expiring_soon', 'expiring_this_week']);
+const URGENT_EXPIRY_STATUSES = new Set([
+    'expiring_today',
+    'expiring_soon',
+    'expiring_this_week',
+]);
 
-// Codex minimal UI pass: implement the matching rule documented by the original recipe TODO.
+const EXPIRY_URGENCY = {
+    expiring_today: 3,
+    expiring_soon: 2,
+    expiring_this_week: 1,
+};
+
 export function matchRecipes(items = [], recipes = [], limit = 5, selectedItemId = null) {
-    const candidateItems = selectedItemId ? items.filter(item => item.id === selectedItemId) : items.filter(item => urgentStatuses.has(item.expiry_status));
-    const availableTypes = new Set(candidateItems.map(item => Number(item.food_type_id)).filter(Boolean));
-    if (!availableTypes.size) return [];
+    const candidateItems = selectedItemId
+        ? items.filter(item => Number(item.id) === Number(selectedItemId))
+        : items.filter(item => URGENT_EXPIRY_STATUSES.has(item.expiry_status));
 
     return recipes.map(recipe => {
-        const required = (recipe.food_types_required || []).map(Number);
-        const matched_food_type_count = required.filter(typeId => availableTypes.has(typeId)).length;
-        return { ...recipe, matched_food_type_count };
-    }).filter(recipe => recipe.matched_food_type_count > 0)
-      .sort((a, b) => b.matched_food_type_count - a.matched_food_type_count)
-      .slice(0, limit);
+        const requiredTypes = recipe.food_types_required ?? [];
+        const matchingItems = candidateItems.filter(item => requiredTypes.includes(item.food_type_id));
+
+        return {
+            ...recipe,
+            matching_score: matchingItems.reduce((sum, item) => sum + (EXPIRY_URGENCY[item.expiry_status] ?? 1), 0),
+            matching_items: matchingItems,
+        };
+    })
+        .filter(recipe => recipe.matching_score > 0)
+        .sort((a, b) => b.matching_score - a.matching_score)
+        .slice(0, limit);
 }

@@ -12,9 +12,9 @@ const authRoutes = require('./routes/auth');
 const itemsRoutes = require('./routes/items');
 const foodTypesRoutes = require('./routes/foodTypes');
 const notificationsRoutes = require('./routes/notifications');
-// Codex UI bridge: mount existing/documented read APIs used by the minimal frontend.
 const categoriesRoutes = require('./routes/categories');
 const recipesRoutes = require('./routes/recipes');
+const brandProductsRoutes = require('./routes/brandProducts');
 
 // note: Middleware = a function that runs on every incoming request before it reaches the route
 // tells the browser "requests from the React app at :5173 are allowed"
@@ -27,6 +27,7 @@ app.use('/api/v1/food-types', foodTypesRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/categories', categoriesRoutes);
 app.use('/api/v1/recipes', recipesRoutes);
+app.use('/api/v1/brand-products', brandProductsRoutes);
 
 // sample route
 app.get('/api/v1/health', (req, res) => {           

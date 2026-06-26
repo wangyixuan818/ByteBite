@@ -39,12 +39,7 @@ router.get('/', async (req, res) => {
 
 // GET /api/v1/recipes/:id
 router.get('/:id', async (req, res) => {
-    // TODO: Validate that id is a positive integer.
-    // TODO: Query one recipe and aggregate its food_types_required array.
-    // TODO: Return { recipe } on success.
-    // TODO: Return the documented NOT_FOUND error if no recipe has this id.
     try {
-        // Codex UI bridge: fix parameter and table names so the existing detail screen can load.
         const id = Number(req.params.id);
         if (!Number.isInteger(id) || id <= 0) {
             return res.status(404).json({

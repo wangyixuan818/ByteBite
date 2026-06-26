@@ -8,7 +8,6 @@ import LandingPage from './page/LandingPage'
 import SuggestionPage from './page/SuggestionPage'
 import RecipeDetailPage from './page/RecipeDetailPage'
 
-
 function App() {
   return (
     <Routes>
@@ -17,7 +16,6 @@ function App() {
       <Route path="/signup" element={<SignupPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path='/dashboard' element={<Dashboard />} />
-        {/* Codex minimal UI pass: expose the recipe screens already present in the project. */}
         <Route path='/dashboard/recipes' element={<SuggestionPage />} />
         <Route path='/dashboard/recipes/:id' element={<RecipeDetailPage />} />
       </Route>
