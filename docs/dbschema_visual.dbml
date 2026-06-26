@@ -65,6 +65,7 @@ Table items {
   name text [not null]
   brand_product_id bigint
   food_type_id bigint
+  category_id bigint 
   quantity numeric
   unit text
   added_date date [not null]
@@ -99,6 +100,7 @@ Ref: items.household_id > households.id // many-to-one
 Ref: items.food_type_id > food_types.id // many-to-one
 Ref: items.brand_product_id > brand_products.id // many-to-one
 Ref: items.created_by > users.id // many-to-one
+Ref: items.category_id > categories.id // many-to-one
 
 // Relationships for the hierarchy (auto-expiry)
 Ref: food_types.category_id > categories.id // many-to-one
