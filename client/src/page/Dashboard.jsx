@@ -14,6 +14,14 @@ const EXPIRY_STATUSES = new Set([
     'expiring_this_week',
 ]);
 
+const STORAGE_SECTIONS = [
+    { id: 'fridge', label: 'Fridge main', storageValues: ['fridge'] },
+    { id: 'fresh-zone', label: 'Fresh zone', storageValues: ['fresh zone'] },
+    { id: 'fridge-door', label: 'Fridge door', storageValues: ['fridge door'] },
+    { id: 'freezer', label: 'Freezer', storageValues: ['freezer'] },
+    { id: 'pantry', label: 'Pantry', storageValues: ['pantry'] },
+];
+
 export default function Dashboard() {
     const { user, logout } = useAuthentication();
     const navigate = useNavigate();
@@ -23,12 +31,26 @@ export default function Dashboard() {
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [activeInventoryView, setActiveInventoryView] = useState(null);
     const [message, setMessage] = useState('');
 
     const expiringItems = useMemo(
         () => itemList.filter(item => EXPIRY_STATUSES.has(item.expiry_status)),
         [itemList]
     );
+
+    const activeSection = STORAGE_SECTIONS.find(section => section.id === activeInventoryView);
+
+    const visibleInventoryItems = useMemo(() => {
+        if (!activeInventoryView || activeInventoryView === 'all') return itemList;
+        return itemList.filter(item => activeSection?.storageValues.includes(item.storage));
+    }, [activeInventoryView, activeSection, itemList]);
+
+    const inventoryTitle = activeInventoryView === 'all'
+        ? 'Full inventory'
+        : activeSection?.label ?? 'Inventory';
+
+    const countItemsInSection = (section) => itemList.filter(item => section.storageValues.includes(item.storage)).length;
 
     const fetchItems = async () => {
         setLoading(true);
@@ -74,6 +96,7 @@ export default function Dashboard() {
     };
 
     const openEditForm = (item) => {
+        setActiveInventoryView(null);
         setEditingItem(item);
         setShowForm(true);
     };
@@ -81,6 +104,11 @@ export default function Dashboard() {
     const closeForm = () => {
         setShowForm(false);
         setEditingItem(null);
+    };
+
+    const refreshAfterItemChange = (text) => {
+        fetchItems();
+        showTemporaryMessage(text);
     };
 
     return (
@@ -105,50 +133,64 @@ export default function Dashboard() {
             {error && <p className="message error" role="alert">{error}</p>}
 
             <section className="dashboard-grid">
-                <button className="fridge-visual panel" onClick={() => document.getElementById('inventory')?.scrollIntoView({ behavior: 'smooth' })}>
-                    <span className="fridge-title">Open inventory</span>
-                    <span className="fridge-door">Fridge · {itemList.filter(i => i.storage !== 'freezer').length} items</span>
-                    <span className="fridge-door freezer">Freezer · {itemList.filter(i => i.storage === 'freezer').length} items</span>
-                </button>
+                <section className="panel fridge-panel" aria-labelledby="fridge-visual-title">
+                    <div className="section-heading">
+                        <div>
+                            <p className="eyebrow">Storage visualizer</p>
+                            <h2 id="fridge-visual-title">Open a section</h2>
+                        </div>
+                        <span>{itemList.length} item(s)</span>
+                    </div>
 
-                <aside className="panel alert-panel">
-                    <h2>Expiring alert</h2>
-                    {expiringItems.length === 0 ? <p>Nothing urgent right now.</p> : (
-                        <ul>
-                            {expiringItems.slice(0, 4).map(item => (
-                                <li key={item.id}>
-                                    <strong>{item.name}</strong> — {item.days_until_expiry < 0 ? 'expired' : `${item.days_until_expiry} day(s)`}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    <button className="text-button" onClick={() => navigate('/dashboard/recipes')}>Check usage suggestions →</button>
-                </aside>
+                    <div className="fridge-visual">
+                        {STORAGE_SECTIONS.map(section => (
+                            <button
+                                type="button"
+                                className={`fridge-section ${section.id}`}
+                                key={section.id}
+                                onClick={() => setActiveInventoryView(section.id)}
+                            >
+                                <span>{section.label}</span>
+                                <small>{countItemsInSection(section)} item(s)</small>
+                            </button>
+                        ))}
+                        <button type="button" className="fridge-section full-inventory" onClick={() => setActiveInventoryView('all')}>
+                            <span>View full inventory</span>
+                            <small>{itemList.length} total</small>
+                        </button>
+                    </div>
+                </section>
 
-                <NotificationInbox notifications={notifications} onNotificationChanged={fetchNotifications} />
+                <NotificationInbox
+                    notifications={notifications}
+                    expiringItems={expiringItems}
+                    onNotificationChanged={fetchNotifications}
+                    onViewSuggestions={() => navigate('/dashboard/recipes')}
+                />
             </section>
 
-            <section id="inventory" className="inventory-section">
-                <div className="section-heading">
-                    <div><p className="eyebrow">Sorted by expiry date</p><h2>Inventory</h2></div>
-                    <span>{itemList.length} item(s)</span>
+            {activeInventoryView && (
+                <div className="modal-backdrop" role="presentation" onMouseDown={() => setActiveInventoryView(null)}>
+                    <section className="modal panel inventory-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" onMouseDown={event => event.stopPropagation()}>
+                        <div className="section-heading">
+                            <div>
+                                <p className="eyebrow">Sorted by expiry date</p>
+                                <h2 id="inventory-modal-title">{inventoryTitle}</h2>
+                            </div>
+                            <button className="icon-button" aria-label="Close" onClick={() => setActiveInventoryView(null)}>×</button>
+                        </div>
+
+                        {loading ? <p className="panel empty-state">Items loading...</p> : (
+                            <ItemList
+                                itemList={visibleInventoryItems}
+                                onEditItem={openEditForm}
+                                onItemDeleted={() => refreshAfterItemChange('Item successfully deleted.')}
+                                onItemUpdated={() => refreshAfterItemChange('Item successfully updated.')}
+                            />
+                        )}
+                    </section>
                 </div>
-
-                {loading ? <p className="panel empty-state">Items loading...</p> : (
-                    <ItemList
-                        itemList={itemList}
-                        onEditItem={openEditForm}
-                        onItemDeleted={() => {
-                            fetchItems();
-                            showTemporaryMessage('Item successfully deleted.');
-                        }}
-                        onItemUpdated={() => {
-                            fetchItems();
-                            showTemporaryMessage('Item successfully updated.');
-                        }}
-                    />
-                )}
-            </section>
+            )}
 
             {showForm && (
                 <div className="modal-backdrop" role="presentation" onMouseDown={closeForm}>

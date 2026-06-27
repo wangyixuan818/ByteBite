@@ -12,9 +12,9 @@ export const getCategories = () => {
 }
 
 // TODO(backend): implement POST /categories, including optional multipart thumbnail handling.
-export const createCategory = ({ name }) => {
+export const createCategory = ({ name, default_storage = 'fridge' }) => {
     const headers = getAuthHeader();
-    return axios.post('/api/v1/categories', { name }, { headers });
+    return axios.post('/api/v1/categories', { name, default_storage }, { headers });
 }
 
 // TODO(backend): implement POST /food-types and return { food_type }.
@@ -25,13 +25,14 @@ export const createFoodType = (data) => {
 
 export const getBrands = () => {
     const headers = getAuthHeader();
-    return axios.get('/api/v1/brands', { headers });
+    return axios.get('/api/v1/brand-products', { headers });
 }
 
-export const createBrand = (data) => {
-    const headers = getAuthHeader();
-    return axios.post('/api/v1/brands', data, { headers });
-}
+// MS3 revisit: brand creation is paused because brand-specific expiry requires curated shelf-life data.
+// export const createBrand = (data) => {
+//     const headers = getAuthHeader();
+//     return axios.post('/api/v1/brand-products', data, { headers });
+// }
 
 export const getItemList = (params = {}) => {
     const headers = getAuthHeader();

@@ -143,27 +143,7 @@ Update any subset of item fields. This endpoint is also used to mark an item as 
 Hard delete (we'll revisit if Usage Analytics gets added).
 - 204 No Content
 
-## The `<item>` object
-```json
-{
-  "id": 42,
-  "household_id": 1,
-  "name": "HL Milk",
-  "food_type_id": 12,
-  "brand_product_id": 5,
-  "category_id": 1,
-  "quantity": 1,
-  "unit": "carton",
-  "added_date": "2026-05-20",
-  "expiry_date": "2026-05-25",
-  "expiry_is_estimated": true,
-  "status": "active",
-  "storage": "fridge",
-  "created_by": 3,
-  "created_at": "2026-05-20T08:30:00Z",
-  "updated_at": "2026-05-20T08:30:00Z"
-}
-```
+
 brand_product_id, food_type_id, and category_id are the catalog rows that matched the user's input via the auto-expiry cascade. Any of them may be null if the cascade didn't find a match at that tier. Persisting all three makes future features (filter by brand, filter by category, brand-specific analytics) possible without joins.
 
 
@@ -223,6 +203,18 @@ Get one recipe with required food type IDs.
 ```
 
 brand_product_id, food_type_id, and category_id are the catalog rows that matched the user's input via the auto-expiry cascade. Any of them may be null if the cascade didn't find a match at that tier. Persisting all three makes future features (filter by brand, filter by category, brand-specific analytics) possible without joins.
+
+## The `<category>` object
+```json
+{
+  "id": 1,
+  "name": "Dairy",
+  "default_storage": "fridge",
+  "pantry_days": null,
+  "fridge_days": 7,
+  "freezer_days": 180
+}
+```
 
 
 ## The `<food_type>` object

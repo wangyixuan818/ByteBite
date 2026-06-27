@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { deleteItem, updateItem } from '../api/item';
 
 const urgentStatuses = new Set(['expired', 'expiring_today', 'expiring_soon']);
@@ -6,6 +7,7 @@ const urgentStatuses = new Set(['expired', 'expiring_today', 'expiring_soon']);
 export default function ItemCard({ item, onItemDeleted, onItemUpdated, onEditItem }) {
     const navigate = useNavigate();
     const urgent = urgentStatuses.has(item.expiry_status);
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
     const handleDelete = async () => {
         if (!window.confirm(`Delete ${item.name}?`)) return;
@@ -14,9 +16,9 @@ export default function ItemCard({ item, onItemDeleted, onItemUpdated, onEditIte
     };
 
     const handleConsumed = async () => {
-        if (!window.confirm(`Mark ${item.name} as consumed?`)) return;
         await updateItem(item.id, { status: 'consumed' });
         onItemUpdated();
+        setShowConfirmation(false);
     };
 
     return (
@@ -35,9 +37,21 @@ export default function ItemCard({ item, onItemDeleted, onItemUpdated, onEditIte
             <div className="button-row item-actions">
                 <button className="button secondary" onClick={() => navigate(`/dashboard/recipes?item=${item.id}`)}>How can I use this?</button>
                 <button className="button secondary" onClick={() => onEditItem(item)}>Update</button>
-                <button className="button secondary" onClick={handleConsumed}>Consumed</button>
+                <button className="button secondary" onClick={() => setShowConfirmation(true)}>Consumed</button>
                 <button className="button danger" onClick={handleDelete}>Delete</button>
             </div>
+
+            {showConfirmation && (
+                <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowConfirmation(false)}>
+                    <section className="panel confirm-panel" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
+                        <p>Mark <strong>{item.name}</strong> as consumed?</p>
+                        <div className="button-row">
+                            <button className="button" onClick={handleConsumed}>Confirm</button>
+                            <button className="button secondary" onClick={() => setShowConfirmation(false)}>Cancel</button>
+                        </div>
+                    </section>
+                </div>
+            )}
         </article>
     );
 }

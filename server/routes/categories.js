@@ -20,7 +20,7 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', async(req, res) => {
-    const { name } = req.body;
+    const { name, default_storage = 'fridge' } = req.body;
 
     if (!name || !name.trim()){
         return res.status(400).json({
@@ -31,12 +31,21 @@ router.post('/', async(req, res) => {
         });
     }
 
+    if (!['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone'].includes(default_storage)) {
+        return res.status(400).json({
+            error: {
+                code: 'VALIDATION_ERROR',
+                message: 'Invalid default storage',
+            }
+        });
+    }
+
     try {
         const result = await pool.query(
-            `INSERT INTO categories(name)
-             VALUES($1)
+            `INSERT INTO categories(name, default_storage)
+             VALUES($1, $2)
              RETURNING id, name, default_storage, pantry_days, fridge_days, freezer_days`,
-             [name.trim()]
+             [name.trim(), default_storage]
         );
 
         return res.status(201).json({
@@ -44,6 +53,14 @@ router.post('/', async(req, res) => {
         });
     } catch(err) {
         console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({
+                error: {
+                    code: 'CATEGORY_ALREADY_EXISTS',
+                    message: 'This category already exists'
+                }
+            });
+        }
         return res.status(500).json({
             error: {
                 code: 'SERVER_ERROR',

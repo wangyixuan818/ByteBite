@@ -19,7 +19,9 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const [categories, setCategories] = useState([]);
     const [foodTypes, setFoodTypes] = useState([]);
     const [brandProducts, setBrandProducts] = useState([]);
-    const [brandName, setBrandName] = useState('');
+    const [selectedBrandProductId, setSelectedBrandProductId] = useState('');
+    // MS3 revisit: free-typed brand input is paused because brand-specific expiry needs curated shelf-life data.
+    // const [brandName, setBrandName] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedFoodType, setSelectedFoodType] = useState(null);
     const [customCategoryName, setCustomCategoryName] = useState('');
@@ -50,19 +52,15 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 setBrandProducts(brandRes.data);
 
                 if (itemToEdit?.food_type_id) {
-                    const existingType = foodTypeRes.data.find(
-                        type => Number(type.id) === Number(itemToEdit.food_type_id));
+                    const existingType = foodTypeRes.data.find(type => Number(type.id) === Number(itemToEdit.food_type_id));
                     setSelectedFoodType(existingType ?? null);
                     if (existingType) {
-                        setSelectedCategory(categoryRes.data.find(
-                            category => Number(category.id) === Number(existingType.category_id)) ?? null);
+                        setSelectedCategory(categoryRes.data.find(category => Number(category.id) === Number(existingType.category_id)) ?? null);
                     }
                 }
 
                 if (itemToEdit?.brand_product_id) {
-                    const existingBrand = brandRes.data.find(
-                        brand => Number(brand.id) === Number(itemToEdit.brand_product_id));
-                    setBrandName(existingBrand?.brand ?? '');
+                    setSelectedBrandProductId(String(itemToEdit.brand_product_id));
                 }
             } catch {
                 setError('Failed to load the food library.');
@@ -87,6 +85,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const selectCategory = (category) => {
         setSelectedCategory(category);
         setSelectedFoodType(null);
+        setSelectedBrandProductId('');
         setStep('food-type');
         setError('');
     };
@@ -102,7 +101,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         setSelectedFoodType(type);
         setFoodTypeIsCustom(false);
         setDetails({ ...blankDetails, name: type.name });
-        setBrandName('');
+        setSelectedBrandProductId('');
         setStep('details');
     };
 
@@ -110,7 +109,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         setSelectedFoodType(null);
         setFoodTypeIsCustom(true);
         setDetails(blankDetails);
-        setBrandName('');
+        setSelectedBrandProductId('');
         setStep('details');
     };
 
@@ -126,22 +125,17 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             setDetails(blankDetails);
             setStep('details');
         } catch (err) {
-            setError(err.response?.data?.error?.message || 'Could not save this category.');
+            if (err.response?.status === 401) {
+                setError('Please log in again before creating a category.');
+            } else {
+                setError(err.response?.data?.error?.message || 'Could not save this category.');
+            }
         } finally {
             setSubmitting(false);
         }
     };
 
     const updateDetail = (field, value) => setDetails(current => ({ ...current, [field]: value }));
-
-    const findMatchingBrandProduct = () => {
-        const trimmedBrandName = brandName.trim();
-        if (!trimmedBrandName) return null;
-
-        return filteredBrands.find(brand =>
-            brand.brand?.toLowerCase() === trimmedBrandName.toLowerCase()
-        ) ?? null;
-    };
 
     const buildPayload = async () => {
         let foodTypeId = selectedFoodType?.id ?? itemToEdit?.food_type_id;
@@ -155,19 +149,16 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             foodTypeId = typeResponse.data.food_type.id;
         }
 
-        const matchedBrand = findMatchingBrandProduct();
-
         const payload = {
             name: details.name.trim(),
             quantity: Number(details.quantity),
             unit: details.unit.trim() || undefined,
             storage: details.storage || undefined,
             food_type_id: foodTypeId || undefined,
-            brand_product_id: matchedBrand?.id || undefined,
+            brand_product_id: selectedBrandProductId ? Number(selectedBrandProductId) : undefined,
         };
 
         if (!isEditing && selectedCategory?.id) payload.category_id = selectedCategory.id;
-        if (brandName.trim()) payload.brand = brandName.trim();
         if (!details.estimateExpiry && details.expiryDate) payload.expiry_date = details.expiryDate;
 
         return payload;
@@ -201,10 +192,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 <p className="field-title">1. Choose an existing category</p>
                 <div className="choice-grid">
                     {categories.map(category => (
-                        <button type="button"
-                                className="choice-button"
-                                key={category.id}
-                                onClick={() => selectCategory(category)}>
+                        <button type="button" className="choice-button" key={category.id} onClick={() => selectCategory(category)}>
                             {category.name}
                         </button>
                     ))}
@@ -213,88 +201,65 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 <button type="button" className="button secondary" onClick={openCustomCategory}>+ Customize category</button>
             </section>}
 
-            {step === 'custom-category' && <form
-                className="form-stack"
-                onSubmit={continueCustomCategory}>
-                <button className="text-button align-left"
-                        type="button"
-                        onClick={() => setStep('category')}
-                        >← Categories
-                </button>
+            {step === 'custom-category' && <form className="form-stack" onSubmit={continueCustomCategory}>
+                <button className="text-button align-left" type="button" onClick={() => setStep('category')}>← Categories</button>
                 <p className="field-title">1. Customize category</p>
                 <label>
                     Category name
-                    <input value={customCategoryName}
-                           onChange={event => setCustomCategoryName(event.target.value)}
-                           placeholder="e.g. Fermented food"
-                           required />
+                    <input value={customCategoryName} onChange={event => setCustomCategoryName(event.target.value)} placeholder="e.g. Fermented food" required />
                 </label>
-                <button className="button"
-                        disabled={submitting}
-                        type="submit">
-                            {submitting ? 'Saving...' : 'Save category and continue'}
+                <p className="helper-text">For now, custom categories use fridge as their default storage. We can make this editable later.</p>
+                <button className="button" disabled={submitting} type="submit">
+                    {submitting ? 'Saving...' : 'Save category and continue'}
                 </button>
             </form>}
 
             {step === 'food-type' && <section>
-                <button className="text-button align-left"
-                        type="button"
-                        onClick={() => setStep('category')}
-                        >← Categories
-                </button>
+                <button className="text-button align-left" type="button" onClick={() => setStep('category')}>← Categories</button>
                 <p className="field-title">2. Choose a food type under {selectedCategory?.name}</p>
                 <div className="choice-grid">
                     {filteredTypes.map(type => (
-                        <button type="button"
-                                className="choice-button"
-                                key={type.id}
-                                onClick={() => selectExistingFoodType(type)}>
+                        <button type="button" className="choice-button" key={type.id} onClick={() => selectExistingFoodType(type)}>
                             {type.name}
                         </button>
                     ))}
                 </div>
                 {!filteredTypes.length && <p className="helper-text">No existing food types in this category.</p>}
-                <div className="flow-divider">
-                    <span>or</span>
-                </div>
-                <button type="button"
-                        className="button secondary"
-                        onClick={openCustomFoodType}
-                        >+ Customize food type
-                </button>
+                <div className="flow-divider"><span>or</span></div>
+                <button type="button" className="button secondary" onClick={openCustomFoodType}>+ Customize food type</button>
             </section>}
 
             {step === 'details' && <form className="form-stack" onSubmit={handleSubmit}>
-                {!isEditing && <button className="text-button align-left"
-                                       type="button"
-                                       onClick={() => setStep(foodTypeIsCustom ? 'category' : 'food-type')}
-                                       >← Back
-                                </button>}
+                {!isEditing && <button className="text-button align-left" type="button" onClick={() => setStep(foodTypeIsCustom ? 'category' : 'food-type')}>← Back</button>}
                 <p className="field-title">
                     {isEditing ? 'Update item details' : foodTypeIsCustom ? '3. Customize food type and item' : '3. Item details'}
                 </p>
 
                 <label>
                     Name
-                    <input value={details.name}
-                           onChange={event => updateDetail('name', event.target.value)}
-                           disabled={!isEditing && !foodTypeIsCustom}
-                           required />
+                    <input value={details.name} onChange={event => updateDetail('name', event.target.value)} disabled={!isEditing && !foodTypeIsCustom} required />
                 </label>
 
                 <label>
-                    Brand
+                    Brand <small>(optional)</small>
+                    <select value={selectedBrandProductId}
+                            onChange={event => setSelectedBrandProductId(event.target.value)}>
+                        <option value="">No brand / not sure</option>
+                        {filteredBrands.map(brand => (
+                            <option key={brand.id}
+                                    value={brand.id}>{brand.brand}
+                            </option>
+                        ))}
+                    </select>
+                    <span className="helper-text">Optional. Selecting an existing brand can improve expiry estimation when the brand has curated shelf-life data.</span>
+                    {/* MS3 revisit: free-typed brand input is paused because unsaved brands do not have reliable expiry rules yet.
                     <input
                         value={brandName}
                         onChange={event => setBrandName(event.target.value)}
                         placeholder="e.g. Meiji, FairPrice, Marigold"
                         list="brand-options"
                     />
-                    <datalist id="brand-options">
-                        {filteredBrands.map(brand => (
-                            <option key={brand.id} value={brand.brand} />
-                        ))}
-                    </datalist>
+                    */}
                 </label>
 
                 <div className="form-row">

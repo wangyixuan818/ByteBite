@@ -141,3 +141,7 @@ vite.config.ts.timestamp-*
 /tmp/
 /server/.npm-cache/
 /.pnpm-store/
+
+# Agent skills
+.agents/
+skills-lock.json

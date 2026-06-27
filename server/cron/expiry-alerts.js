@@ -1,7 +1,6 @@
 // Scheduled job: marks active items whose expiry_date has passed as 'expired'
 // Runs every day at 08:00 Singapore time
 
-// Codex startup safeguard: inventory/auth should still run if the optional scheduler is not installed locally.
 let cron = null;
 try {
     cron = require('node-cron');
@@ -66,9 +65,14 @@ async function createExpiryNotifications() {
     }
 }
 
-// skip scheduling during tests so the job doesn't keep the event loop alive after tests finish
-if (process.env.NODE_ENV !== 'test' && cron) {
-    cron.schedule('0 8 * * *', markExpiredItems, { timezone: 'Asia/Singapore' });
+async function runExpiryAlertJobs() {
+    await markExpiredItems();
+    await createExpiryNotifications();
 }
 
-module.exports = { markExpiredItems, createExpiryNotifications };
+// skip scheduling during tests so the job doesn't keep the event loop alive after tests finish
+if (process.env.NODE_ENV !== 'test' && cron) {
+    cron.schedule('0 8 * * *', runExpiryAlertJobs, { timezone: 'Asia/Singapore' });
+}
+
+module.exports = { markExpiredItems, createExpiryNotifications, runExpiryAlertJobs };

@@ -29,11 +29,16 @@
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dashboard-header { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 42px 0 24px; }
 .dashboard-header h1 { margin-bottom: 0; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
-.fridge-visual { color: inherit; text-align: left; cursor: pointer; display: grid; grid-template-rows: auto 1fr .65fr; padding: 0; overflow: hidden; }
-.fridge-title { padding: 15px 18px; font-weight: 750; background: #eef1eb; }
-.fridge-door { display: grid; place-content: center; min-height: 130px; font-size: 1.1rem; border-top: 2px solid #465043; }
-.fridge-door.freezer { min-height: 90px; }
+.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+.fridge-panel { display: flex; flex-direction: column; gap: 14px; }
+.fridge-visual { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fridge-section { min-height: 82px; border: 2px solid #465043; border-radius: 8px; background: #f8faf6; color: inherit; cursor: pointer; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 12px; text-align: left; }
+.fridge-section:hover { background: var(--green-soft); }
+.fridge-section span { font-weight: 750; }
+.fridge-section small { color: #5b6259; }
+.fridge-section.freezer { background: #eef7fb; }
+.fridge-section.pantry { background: #fff9ec; }
+.fridge-section.full-inventory { grid-column: 1 / -1; min-height: 58px; background: #eef1eb; align-items: center; text-align: center; }
 .alert-panel li { margin-bottom: 10px; }
 .notification-panel { display: flex; flex-direction: column; gap: 10px; }
 .section-heading.compact { margin-bottom: 6px; }
@@ -59,6 +64,8 @@
 .empty-state { text-align: center; padding: 36px 20px; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(18, 24, 18, .5); display: grid; place-items: center; z-index: 10; padding: 20px; }
 .modal { width: min(600px, 100%); max-height: calc(100vh - 40px); overflow: auto; }
+.inventory-modal { width: min(900px, 100%); }
+.confirm-panel { width: min(360px, calc(100vw - 40px)); display: grid; gap: 14px; }
 .mode-switch { display: flex; gap: 18px; border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
 .mode-switch legend, .field-title { font-weight: 750; }
 .mode-switch label { flex-direction: row; align-items: center; font-weight: 500; }
