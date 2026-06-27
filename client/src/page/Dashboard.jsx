@@ -194,7 +194,7 @@ export default function Dashboard() {
 
             {showForm && (
                 <div className="modal-backdrop" role="presentation" onMouseDown={closeForm}>
-                    <section className="modal panel" role="dialog" aria-modal="true" aria-labelledby="add-item-title" onMouseDown={event => event.stopPropagation()}>
+                    <section className="modal panel add-food-modal" role="dialog" aria-modal="true" aria-labelledby="add-item-title" onMouseDown={event => event.stopPropagation()}>
                         <div className="section-heading">
                             <h2 id="add-item-title">{editingItem ? 'Update food' : 'Add food'}</h2>
                             <button className="icon-button" aria-label="Close" onClick={closeForm}>×</button>

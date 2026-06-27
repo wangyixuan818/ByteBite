@@ -43,12 +43,12 @@ export default function LoginPage() {
 
     return (
         <main className="auth-page">
-            <Link className="brand-link" to="/">ByteBite</Link>
-            <section className="panel auth-panel">
-                <div>
-                    <p className="eyebrow">Welcome back</p>
+            <Link className="auth-brand" to="/">ByteBite</Link>
+            <section className="auth-panel">
+                <div className="auth-copy">
+                    <p className="auth-kicker">Welcome back</p>
                     <h1>Log in</h1>
-                    <p>Open your household fridge inventory.</p>
+                    <p>Open your fridge notes and pick up where your groceries left off.</p>
                 </div>
 
                 <form className="form-stack" onSubmit={handleRequest}>
@@ -68,7 +68,7 @@ export default function LoginPage() {
                         {submitting ? 'Logging in...' : 'Log in'}
                     </button>
 
-                    <p className="helper-text">
+                    <p className="auth-helper">
                         Don&apos;t have an account yet? <Link to="/signup">Sign up now</Link>
                     </p>
                 </form>

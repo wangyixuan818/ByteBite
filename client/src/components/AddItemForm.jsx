@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addItem, createCategory, createFoodType, getBrands, getCategories, getFoodTypes, updateItem } from '../api/item';
 
+const categoryIcons = import.meta.glob('../assets/bytebite-ui-v2/categories/*.png', { eager: true, import: 'default' });
+const foodTypeIcons = import.meta.glob('../assets/bytebite-ui-v2/foodtypes/*.png', { eager: true, import: 'default' });
+
 const blankDetails = {
     name: '',
     quantity: 1,
@@ -12,6 +15,23 @@ const blankDetails = {
 };
 
 const toDateInput = (value) => value ? String(value).split('T')[0] : '';
+const slugify = (value) => String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const assetBySlug = (assetMap) => Object.fromEntries(
+    Object.entries(assetMap).map(([path, src]) => [path.split('/').pop().replace('.png', ''), src])
+);
+
+const categoryIconBySlug = assetBySlug(categoryIcons);
+const foodTypeIconBySlug = assetBySlug(foodTypeIcons);
+const placeholderIcon = categoryIconBySlug['custom-placeholder'];
+
+const getCategoryIcon = (name) => categoryIconBySlug[slugify(name)] ?? placeholderIcon;
+const getFoodTypeIcon = (name) => foodTypeIconBySlug[slugify(name)] ?? placeholderIcon;
 
 export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) => {
     const isEditing = Boolean(itemToEdit);
@@ -81,6 +101,12 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             : brandProducts,
         [brandProducts, selectedFoodType]
     );
+
+    const activeFoodIcon = selectedFoodType
+        ? getFoodTypeIcon(selectedFoodType.name)
+        : selectedCategory
+            ? getCategoryIcon(selectedCategory.name)
+            : placeholderIcon;
 
     const selectCategory = (category) => {
         setSelectedCategory(category);
@@ -193,7 +219,10 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 <div className="choice-grid">
                     {categories.map(category => (
                         <button type="button" className="choice-button" key={category.id} onClick={() => selectCategory(category)}>
-                            {category.name}
+                            <span className="choice-icon-wrap" aria-hidden="true">
+                                <img src={getCategoryIcon(category.name)} alt="" />
+                            </span>
+                            <span>{category.name}</span>
                         </button>
                     ))}
                 </div>
@@ -220,7 +249,10 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 <div className="choice-grid">
                     {filteredTypes.map(type => (
                         <button type="button" className="choice-button" key={type.id} onClick={() => selectExistingFoodType(type)}>
-                            {type.name}
+                            <span className="choice-icon-wrap" aria-hidden="true">
+                                <img src={getFoodTypeIcon(type.name)} alt="" />
+                            </span>
+                            <span>{type.name}</span>
                         </button>
                     ))}
                 </div>
@@ -231,6 +263,15 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
             {step === 'details' && <form className="form-stack" onSubmit={handleSubmit}>
                 {!isEditing && <button className="text-button align-left" type="button" onClick={() => setStep(foodTypeIsCustom ? 'category' : 'food-type')}>← Back</button>}
+                <div className="selected-food-summary">
+                    <span className="choice-icon-wrap" aria-hidden="true">
+                        <img src={activeFoodIcon} alt="" />
+                    </span>
+                    <div>
+                        <small>{selectedCategory?.name ?? 'Food item'}</small>
+                        <strong>{selectedFoodType?.name ?? (foodTypeIsCustom ? 'Custom food type' : details.name || 'Item details')}</strong>
+                    </div>
+                </div>
                 <p className="field-title">
                     {isEditing ? 'Update item details' : foodTypeIsCustom ? '3. Customize food type and item' : '3. Item details'}
                 </p>

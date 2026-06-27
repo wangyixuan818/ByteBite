@@ -46,12 +46,12 @@ export default function SignupPage() {
 
     return (
         <main className="auth-page">
-            <Link className="brand-link" to="/">ByteBite</Link>
-            <section className="panel auth-panel">
-                <div>
-                    <p className="eyebrow">Create account</p>
+            <Link className="auth-brand" to="/">ByteBite</Link>
+            <section className="auth-panel">
+                <div className="auth-copy">
+                    <p className="auth-kicker">Create account</p>
                     <h1>Sign up</h1>
-                    <p>Start with a fresh household inventory.</p>
+                    <p>Start a simple household inventory before the next grocery run.</p>
                 </div>
 
                 <form className="form-stack" onSubmit={handleRequest}>
@@ -76,7 +76,7 @@ export default function SignupPage() {
                         {submitting ? 'Creating account...' : 'Sign up'}
                     </button>
 
-                    <p className="helper-text">
+                    <p className="auth-helper">
                         Already have an account? <Link to="/login">Log in now</Link>
                     </p>
                 </form>

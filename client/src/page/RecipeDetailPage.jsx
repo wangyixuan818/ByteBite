@@ -19,14 +19,14 @@ export default function RecipeDetailPage() {
     }, [id]);
 
     return (
-        <main className="page-shell content-page">
+        <main className="page-shell content-page recipe-page recipe-detail-page">
             <nav className="topbar"><strong>ByteBite</strong><Link to="/dashboard/recipes">← Suggestions</Link></nav>
             {loading && <p className="panel empty-state">Loading recipe...</p>}
             {error && <p className="message error">{error}</p>}
             {recipe && <article className="panel recipe-detail">
                 <p className="eyebrow">{recipe.cuisine_type || 'Recipe'}</p>
                 <h1>{recipe.name}</h1>
-                <p>{[recipe.prep_time_minutes && `${recipe.prep_time_minutes} minutes`, recipe.difficulty_level, recipe.calories_kcal && `${recipe.calories_kcal} kcal`].filter(Boolean).join(' · ')}</p>
+                <p>{[recipe.prep_time_minutes && `${recipe.prep_time_minutes} minutes`, recipe.difficulty_level, recipe.calories_kcal && `${recipe.calories_kcal} kcal`].filter(Boolean).join(' / ')}</p>
                 <h2>Ingredients</h2>
                 <p className="preserve-lines">{recipe.ingredients_text || 'Ingredients not provided.'}</p>
                 <h2>Instructions</h2>

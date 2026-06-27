@@ -27,7 +27,7 @@ export default function SuggestionPage() {
     const suggestions = useMemo(() => matchRecipes(items, recipes, 20, itemId || null), [items, recipes, itemId]);
 
     return (
-        <main className="page-shell content-page">
+        <main className="page-shell content-page recipe-page">
             <nav className="topbar"><strong>ByteBite</strong><Link to="/dashboard">← Dashboard</Link></nav>
             <header>
                 <p className="eyebrow">Food usage suggestions</p>

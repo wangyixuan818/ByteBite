@@ -1,45 +1,76 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthentication } from "../context/AuthenticationContext";
-import { useEffect } from "react";
+import pepperHero from "../assets/bytebite-ui-v2/hero/pepper.png";
+import cornHero from "../assets/bytebite-ui-v2/hero/corn.png";
+import meatHero from "../assets/bytebite-ui-v2/hero/meat.png";
+import lemonHero from "../assets/bytebite-ui-v2/hero/lemon.png";
+import lettuceHero from "../assets/bytebite-ui-v2/hero/lettuce.png";
+
+const floatingFoods = [
+    { name: "Pepper", src: pepperHero, className: "hero-food pepper" },
+    { name: "Lemon", src: lemonHero, className: "hero-food lemon" },
+    { name: "Lettuce", src: lettuceHero, className: "hero-food lettuce" },
+    { name: "Meat", src: meatHero, className: "hero-food meat" },
+    { name: "Corn", src: cornHero, className: "hero-food corn" },
+];
 
 export default function LandingPage() {
     const navigate = useNavigate();
-    const {user, loading} = useAuthentication();
+    const { user, loading } = useAuthentication();
 
     useEffect(() => {
         if (!loading && user) {
-            navigate('/dashboard');
+            navigate("/dashboard");
         }
     }, [user, loading, navigate]);
 
     if (loading) {
-        return <p>Loading...</p>;
-    } else {
-        return (
-            <main className="page-shell">
-                <nav className="topbar">
-                    <strong>ByteBite</strong>
-                    <div className="button-row">
-                        <button className="button secondary" onClick={() => navigate('/login')}>Log in</button>
-                        <button className="button" onClick={() => navigate('/signup')}>Sign up</button>
+        return <main className="landing-loading">Loading ByteBite...</main>;
+    }
+
+    return (
+        <main className="landing-page">
+            <section className="landing-hero" aria-labelledby="landing-title">
+                <nav className="landing-nav" aria-label="Primary">
+                    <button className="landing-brand" onClick={() => navigate("/")}>
+                        <span>ByteBite</span>
+                    </button>
+                    <div className="landing-nav-actions">
+                        <button className="landing-link-button" onClick={() => navigate("/login")}>Log in</button>
+                        <button className="landing-button small" onClick={() => navigate("/signup")}>Sign up</button>
                     </div>
                 </nav>
-                <section className="landing-grid">
-                    <div>
-                        <p className="eyebrow">Fridge inventory and expiry helper</p>
-                        <h1>Track less. Waste less.</h1>
-                        <p>Keep a simple inventory, see what expires first, and find ideas for what to use next.</p>
-                        <div className="button-row landing-actions">
-                            <button className="button" onClick={() => navigate('/signup')}>Get started</button>
-                            <button className="button secondary" onClick={() => navigate('/login')}>Log in</button>
-                        </div>
+
+                <div className="landing-hero-content">
+                    <div className="hero-copy">
+                        <h1 id="landing-title">
+                            <span className="outline-line">Track Less.</span>
+                            <span>Waste Less.</span>
+                        </h1>
                     </div>
-                    <div className="preview-card" aria-label="ByteBite feature preview">
-                        <div className="mini-fridge"><span>Fridge</span><span>Freezer</span></div>
-                        <div><strong>Expiring soon</strong><p>Milk · 1 day</p><p>Spinach · 3 days</p></div>
-                    </div>
-                </section>
-            </main>
-        );
-    }
+
+                    <aside className="hero-intro" aria-label="ByteBite introduction">
+                        <h2>Fridge Tracker</h2>
+                        <p>
+                            Turn forgotten groceries into smarter choices. ByteBite helps households reduce food waste through simple inventory tracking and expiry alerts.
+                        </p>
+                        <button className="landing-button" onClick={() => navigate("/signup")}>Get Started For Free</button>
+                    </aside>
+                </div>
+
+                <div className="food-float-row" aria-hidden="true">
+                    {floatingFoods.map((food, index) => (
+                        <span
+                            className={food.className}
+                            key={food.name}
+                            style={{ "--i": index }}
+                        >
+                            <img src={food.src} alt="" draggable="false" />
+                        </span>
+                    ))}
+                </div>
+            </section>
+        </main>
+    );
 }
