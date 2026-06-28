@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthentication } from '../context/AuthenticationContext';
+import BrandTitle from '../components/BrandTitle';
 
 export default function SignupPage() {
     const [displayName, setDisplayName] = useState('');
@@ -9,6 +10,7 @@ export default function SignupPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [confirmPw, setConfirmPw] = useState('')
     const { login } = useAuthentication();
     const navigate = useNavigate();
 
@@ -18,6 +20,11 @@ export default function SignupPage() {
 
         if (password.length < 8) {
             setError('Password length must be at least 8 characters.');
+            return;
+        }
+
+        if (confirmPw !==  password) {
+            setError('Passwords do not match.');
             return;
         }
 
@@ -46,7 +53,7 @@ export default function SignupPage() {
 
     return (
         <main className="auth-page">
-            <Link className="auth-brand" to="/">ByteBite</Link>
+            <BrandTitle className="auth-brand" to="/" />
             <section className="auth-panel">
                 <div className="auth-copy">
                     <p className="auth-kicker">Create account</p>
@@ -70,6 +77,11 @@ export default function SignupPage() {
                     <label>
                         Password
                         <input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Password" required />
+                    </label>
+
+                    <label>
+                        Reconfirm password
+                        <input type="password" value={confirmPw} onChange={event => setConfirmPw(event.target.value)} placeholder="Confirm your password again" required />
                     </label>
 
                     <button className="button" type="submit" disabled={submitting}>

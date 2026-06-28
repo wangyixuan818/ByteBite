@@ -6,6 +6,7 @@ import cornHero from "../assets/bytebite-ui-v2/hero/corn.png";
 import meatHero from "../assets/bytebite-ui-v2/hero/meat.png";
 import lemonHero from "../assets/bytebite-ui-v2/hero/lemon.png";
 import lettuceHero from "../assets/bytebite-ui-v2/hero/lettuce.png";
+import BrandTitle from "../components/BrandTitle";
 
 const floatingFoods = [
     { name: "Pepper", src: pepperHero, className: "hero-food pepper" },
@@ -33,9 +34,7 @@ export default function LandingPage() {
         <main className="landing-page">
             <section className="landing-hero" aria-labelledby="landing-title">
                 <nav className="landing-nav" aria-label="Primary">
-                    <button className="landing-brand" onClick={() => navigate("/")}>
-                        <span>ByteBite</span>
-                    </button>
+                    <BrandTitle as="button" className="landing-brand" onClick={() => navigate("/")} />
                     <div className="landing-nav-actions">
                         <button className="landing-link-button" onClick={() => navigate("/login")}>Log in</button>
                         <button className="landing-button small" onClick={() => navigate("/signup")}>Sign up</button>

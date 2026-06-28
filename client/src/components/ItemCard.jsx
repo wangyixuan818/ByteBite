@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useState } from 'react';
 import { deleteItem, updateItem } from '../api/item';
 
 const urgentStatuses = new Set(['expired', 'expiring_today', 'expiring_soon']);
 
-export default function ItemCard({ item, onItemDeleted, onItemUpdated, onEditItem }) {
+export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUpdated, onEditItem }) {
     const navigate = useNavigate();
     const urgent = urgentStatuses.has(item.expiry_status);
     const [showConfirmation, setShowConfirmation] = useState(false);
@@ -35,13 +36,13 @@ export default function ItemCard({ item, onItemDeleted, onItemUpdated, onEditIte
             </div>
 
             <div className="button-row item-actions">
-                <button className="button secondary" onClick={() => navigate(`/dashboard/recipes?item=${item.id}`)}>How can I use this?</button>
+                <button className="button secondary" onClick={() => navigate(`/dashboard/recipes?mode=use-item&item=${item.id}`)}>How can I use this?</button>
                 <button className="button secondary" onClick={() => onEditItem(item)}>Update</button>
                 <button className="button secondary" onClick={() => setShowConfirmation(true)}>Consumed</button>
                 <button className="button danger" onClick={handleDelete}>Delete</button>
             </div>
 
-            {showConfirmation && (
+            {showConfirmation && modalContainer instanceof Element && createPortal(
                 <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowConfirmation(false)}>
                     <section className="panel confirm-panel" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
                         <p>Mark <strong>{item.name}</strong> as consumed?</p>
@@ -50,7 +51,8 @@ export default function ItemCard({ item, onItemDeleted, onItemUpdated, onEditIte
                             <button className="button secondary" onClick={() => setShowConfirmation(false)}>Cancel</button>
                         </div>
                     </section>
-                </div>
+                </div>,
+                modalContainer
             )}
         </article>
     );

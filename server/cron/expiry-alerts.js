@@ -70,9 +70,37 @@ async function runExpiryAlertJobs() {
     await createExpiryNotifications();
 }
 
+function getSingaporeHour(date = new Date()) {
+    const hourPart = new Intl.DateTimeFormat('en-SG', {
+        timeZone: 'Asia/Singapore',
+        hour: 'numeric',
+        hour12: false,
+    }).formatToParts(date).find(part => part.type === 'hour');
+
+    return Number(hourPart?.value);
+}
+
+function shouldRunStartupCatchup(date = new Date()) {
+    return getSingaporeHour(date) >= 8;
+}
+
 // skip scheduling during tests so the job doesn't keep the event loop alive after tests finish
 if (process.env.NODE_ENV !== 'test' && cron) {
     cron.schedule('0 8 * * *', runExpiryAlertJobs, { timezone: 'Asia/Singapore' });
+
+    // If the server was not running at 08:00, node-cron cannot replay the missed run.
+    // The notification insert is deduplicated per day, so this is safe across restarts.
+    if (shouldRunStartupCatchup()) {
+        runExpiryAlertJobs().catch(err => {
+            console.error('[expiry-alerts] startup catch-up failed:', err);
+        });
+    }
 }
 
-module.exports = { markExpiredItems, createExpiryNotifications, runExpiryAlertJobs };
+module.exports = {
+    markExpiredItems,
+    createExpiryNotifications,
+    runExpiryAlertJobs,
+    getSingaporeHour,
+    shouldRunStartupCatchup,
+};

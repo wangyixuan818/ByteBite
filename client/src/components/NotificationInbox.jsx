@@ -1,11 +1,9 @@
-import { updateNotification } from '../api/notification';
-
-export default function NotificationInbox({ notifications, expiringItems, onNotificationChanged, onViewSuggestions }) {
-    const unreadNotifications = notifications.filter(notification => !notification.read_at);
-
-    const markRead = async (notification) => {
-        await updateNotification(notification.id, { read: true });
-        onNotificationChanged();
+export default function NotificationInbox({ expiringItems, onViewSuggestions }) {
+    const expiryLabel = (item) => {
+        if (item.days_until_expiry < 0) return 'Expired';
+        if (item.days_until_expiry === 0) return 'Expires today';
+        if (item.days_until_expiry === 1) return 'Expires tomorrow';
+        return `Expires in ${item.days_until_expiry} days`;
     };
 
     return (
@@ -13,37 +11,36 @@ export default function NotificationInbox({ notifications, expiringItems, onNoti
             <div className="section-heading compact">
                 <div>
                     <p className="eyebrow">Alerts</p>
-                    <h2>{unreadNotifications.length ? 'Notification inbox' : 'Expiring alert'}</h2>
+                    <h2>Expiring food</h2>
                 </div>
-                {unreadNotifications.length > 0 && <span>{unreadNotifications.length} unread</span>}
+                <span className="alert-count">{expiringItems.length || 'None'}</span>
             </div>
 
-            {unreadNotifications.length > 0 ? (
-                <ul className="notification-list">
-                    {unreadNotifications.slice(0, 5).map(notification => (
-                        <li key={notification.id} className="unread">
-                            <p>{notification.message}</p>
-                            <small>{notification.notification_date?.split('T')[0] ?? notification.created_at?.split('T')[0]}</small>
-                            <button className="text-button" type="button" onClick={() => markRead(notification)}>
-                                Mark read
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            ) : expiringItems.length === 0 ? (
-                <p>Nothing urgent right now.</p>
-            ) : (
-                <ul>
-                    {expiringItems.slice(0, 4).map(item => (
-                        <li key={item.id}>
-                            <strong>{item.name}</strong> — {item.days_until_expiry < 0 ? 'expired' : `${item.days_until_expiry} day(s)`}
-                        </li>
-                    ))}
-                </ul>
-            )}
+            <section className="alert-section expiry-section" aria-labelledby="expiry-alert-title">
+                <div className="alert-section-heading">
+                    <h3 id="expiry-alert-title">Needs attention</h3>
+                    <span>Sorted soonest</span>
+                </div>
 
-            <button className="text-button" type="button" onClick={onViewSuggestions}>
-                Check usage suggestions →
+                {expiringItems.length === 0 ? (
+                    <p className="alert-empty">Nothing urgent right now.</p>
+                ) : (
+                    <ul className="expiry-alert-list">
+                        {expiringItems.map(item => (
+                            <li key={item.id} className={item.days_until_expiry <= 0 ? 'urgent' : ''}>
+                                <div>
+                                    <strong>{item.name}</strong>
+                                    <small>{item.storage || 'Storage not set'}</small>
+                                </div>
+                                <span>{expiryLabel(item)}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
+
+            <button className="usage-suggestion-button" type="button" onClick={onViewSuggestions}>
+                Check usage suggestions
             </button>
         </aside>
     );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthentication } from '../context/AuthenticationContext';
+import BrandTitle from '../components/BrandTitle';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -43,7 +44,7 @@ export default function LoginPage() {
 
     return (
         <main className="auth-page">
-            <Link className="auth-brand" to="/">ByteBite</Link>
+            <BrandTitle className="auth-brand" to="/" />
             <section className="auth-panel">
                 <div className="auth-copy">
                     <p className="auth-kicker">Welcome back</p>

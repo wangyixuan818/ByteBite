@@ -10,14 +10,14 @@ const EXPIRY_URGENCY = {
     expiring_this_week: 1,
 };
 
-export function matchRecipes(items = [], recipes = [], limit = 5, selectedItemId = null) {
+export function matchRecipes(items = [], recipes = [], selectedItemId = null) {
     const candidateItems = selectedItemId
         ? items.filter(item => Number(item.id) === Number(selectedItemId))
         : items.filter(item => URGENT_EXPIRY_STATUSES.has(item.expiry_status));
 
     return recipes.map(recipe => {
-        const requiredTypes = recipe.food_types_required ?? [];
-        const matchingItems = candidateItems.filter(item => requiredTypes.includes(item.food_type_id));
+        const requiredTypes = (recipe.food_types_required ?? []).map(Number);
+        const matchingItems = candidateItems.filter(item => requiredTypes.includes(Number(item.food_type_id)));
 
         return {
             ...recipe,
@@ -26,6 +26,5 @@ export function matchRecipes(items = [], recipes = [], limit = 5, selectedItemId
         };
     })
         .filter(recipe => recipe.matching_score > 0)
-        .sort((a, b) => b.matching_score - a.matching_score)
-        .slice(0, limit);
+        .sort((a, b) => b.matching_score - a.matching_score);
 }

@@ -326,10 +326,23 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                     </select>
                 </label>
 
-                {!isEditing && <label className="inline-choice">
-                    <input type="checkbox" checked={details.estimateExpiry} onChange={event => updateDetail('estimateExpiry', event.target.checked)} />
-                    Estimate expiry automatically
-                </label>}
+                {!isEditing && (
+                    <label className={`estimate-expiry-card ${details.estimateExpiry ? 'active' : ''}`}>
+                        <input
+                            type="checkbox"
+                            checked={details.estimateExpiry}
+                            onChange={event => updateDetail('estimateExpiry', event.target.checked)}
+                        />
+                        <span className="estimate-expiry-illustration" aria-hidden="true">
+                            <span className="estimate-spark">!</span>
+                        </span>
+                        <span className="estimate-expiry-copy">
+                            <strong>Smart expiry estimate</strong>
+                            <small>Let ByteBite pick an expiry date from food type, storage, and brand shelf-life data.</small>
+                        </span>
+                        <span className="estimate-expiry-status">{details.estimateExpiry ? 'On' : 'Off'}</span>
+                    </label>
+                )}
 
                 {(isEditing || !details.estimateExpiry) && <label>
                     Expiry date
