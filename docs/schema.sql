@@ -46,7 +46,7 @@ create table categories (
 
 
 -- 5. food_types: reference data (drives auto-expiry + categories)
--- Seeded separately (see docs/foodTypes.sql).
+-- Seeded separately with categories and brands (see docs/foodTypes.sql).
 create table food_types (
   id                      bigint generated always as identity primary key,
   name                    text not null unique,

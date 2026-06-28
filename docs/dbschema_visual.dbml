@@ -91,6 +91,28 @@ Table notifications {
   Note: 'unique (user_id, item_id, type, notification_date), one notification per item per type per day'
 }
 
+Table recipes {
+  id bigint [primary key]
+  name text [not null]
+  cuisine_type text [not null, note: "check (cuisine_type in ('chinese','western','japanese','korean','indian','italian','other'))"]
+  calories_kcal integer [note: 'check (calories_kcal >= 0)']
+  difficulty_level integer [note: 'check (difficulty_level between 1 and 5)']
+  prep_time_minutes integer [note: 'check (prep_time_minutes >= 0)']
+  ingredients_text text
+  instructions_text text
+  nutrition text
+}
+
+Table recipe_food_types {
+  recipe_id bigint [not null]
+  food_type_id bigint [not null]
+
+  indexes {
+    (recipe_id, food_type_id) [pk]
+    food_type_id
+  }
+}
+
 // Relationships for user_household
 Ref: user_household.user_id > users.id // many-to-one
 Ref: user_household.household_id > households.id // many-to-one
@@ -109,3 +131,7 @@ Ref: brand_products.food_type_id > food_types.id // many-to-one
 // Relationships for notifications
 Ref: notifications.user_id > users.id // many-to-one
 Ref: notifications.item_id > items.id // many-to-one (nullable, cascades on delete)
+
+// Relationships for recipe matching
+Ref: recipe_food_types.recipe_id > recipes.id // many-to-one
+Ref: recipe_food_types.food_type_id > food_types.id // many-to-one

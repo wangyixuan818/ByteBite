@@ -1,4 +1,4 @@
--- Run after docs/schema.sql and the hierarchical food catalog seed.
+-- Run after docs/schema.sql and docs/foodTypes.sql.
 
 create table recipes (
   id                    bigint generated always as identity primary key,

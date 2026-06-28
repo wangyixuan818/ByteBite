@@ -1,3 +1,79 @@
+-- Run AFTER docs/schema.sql, docs/foodTypes.sql, and docs/recipes.sql.
+
+do $$
+declare
+  missing_food_types text;
+begin
+  select string_agg(required_name, ', ' order by required_name)
+  into missing_food_types
+  from (
+    values
+      ('Apple'),
+      ('Banana'),
+      ('Bread'),
+      ('Cheese'),
+      ('Chicken Breast'),
+      ('Eggs'),
+      ('Kangkong'),
+      ('Milk'),
+      ('Orange'),
+      ('Orange Juice'),
+      ('Pickled Daikon'),
+      ('Pork Belly'),
+      ('Prawns'),
+      ('Salmon'),
+      ('Spinach'),
+      ('Tofu'),
+      ('Tomato'),
+      ('Yogurt')
+  ) as required(required_name)
+  where not exists (
+    select 1
+    from food_types
+    where food_types.name = required.required_name
+  );
+
+  if missing_food_types is not null then
+    raise exception 'Missing recipe food types: %. Run docs/foodTypes.sql before docs/seed_recipes.sql.', missing_food_types;
+  end if;
+end $$;
+
+delete from recipe_food_types
+where recipe_id in (
+  select id
+  from recipes
+  where name in (
+    'Tomato Egg Stir-fry',
+    'Cheese Spinach Omelette',
+    'Garlic Kangkong Stir-fry',
+    'Tofu Spinach Soup',
+    'Salmon Tofu Rice Bowl',
+    'Pork Belly Kangkong Ssam',
+    'Prawn Spinach Curry',
+    'Chicken Tomato Cheese Skillet',
+    'Apple Yogurt Breakfast Toast',
+    'Orange Banana Yogurt Smoothie',
+    'Cheesy Bread Pudding',
+    'Pickled Daikon Egg Rice Bowl'
+  )
+);
+
+delete from recipes
+where name in (
+  'Tomato Egg Stir-fry',
+  'Cheese Spinach Omelette',
+  'Garlic Kangkong Stir-fry',
+  'Tofu Spinach Soup',
+  'Salmon Tofu Rice Bowl',
+  'Pork Belly Kangkong Ssam',
+  'Prawn Spinach Curry',
+  'Chicken Tomato Cheese Skillet',
+  'Apple Yogurt Breakfast Toast',
+  'Orange Banana Yogurt Smoothie',
+  'Cheesy Bread Pudding',
+  'Pickled Daikon Egg Rice Bowl'
+);
+
 insert into recipes (name, cuisine_type, calories_kcal, difficulty_level, prep_time_minutes, ingredients_text, instructions_text, nutrition)
 values
   ('Tomato Egg Stir-fry', 'chinese', 280, 2, 15,

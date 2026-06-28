@@ -35,6 +35,10 @@ function getNotificationSnoozeKey(userId) {
     return `bytebite-notification-snoozed:${userId ?? 'guest'}:${todayKey()}`;
 }
 
+function isNotificationSnoozed(key) {
+    return sessionStorage.getItem(key) === 'true';
+}
+
 export default function Dashboard() {
     const { user, logout } = useAuthentication();
     const navigate = useNavigate();
@@ -46,7 +50,11 @@ export default function Dashboard() {
     const [editingItem, setEditingItem] = useState(null);
     const [activeInventoryView, setActiveInventoryView] = useState(null);
     const [message, setMessage] = useState('');
-    const [notificationPopupDismissed, setNotificationPopupDismissed] = useState(false);
+    const notificationSnoozeKey = useMemo(() => getNotificationSnoozeKey(user?.id), [user?.id]);
+    const [dismissedNotificationKey, setDismissedNotificationKey] = useState(() => {
+        const initialKey = getNotificationSnoozeKey(user?.id);
+        return isNotificationSnoozed(initialKey) ? initialKey : '';
+    });
 
     const expiringItems = useMemo(
         () => itemList.filter(item => EXPIRY_STATUSES.has(item.expiry_status)),
@@ -56,7 +64,8 @@ export default function Dashboard() {
         () => notifications.filter(notification => !notification.read_at),
         [notifications]
     );
-    const notificationSnoozeKey = useMemo(() => getNotificationSnoozeKey(user?.id), [user?.id]);
+    const notificationPopupDismissed =
+        dismissedNotificationKey === notificationSnoozeKey || isNotificationSnoozed(notificationSnoozeKey);
     const showNotificationPopup = unreadNotifications.length > 0 && !notificationPopupDismissed;
 
     const activeSection = STORAGE_SECTIONS.find(section => section.id === activeInventoryView);
@@ -105,10 +114,6 @@ export default function Dashboard() {
             .catch(() => setError('Failed to get notifications. Check that the server is running, then try again.'));
     }, []);
 
-    useEffect(() => {
-        setNotificationPopupDismissed(sessionStorage.getItem(notificationSnoozeKey) === 'true');
-    }, [notificationSnoozeKey]);
-
     const showTemporaryMessage = (text) => {
         setMessage(text);
         window.setTimeout(() => setMessage(''), 3000);
@@ -138,7 +143,7 @@ export default function Dashboard() {
     const markAllNotificationsRead = async () => {
         await Promise.all(unreadNotifications.map(notification => updateNotification(notification.id, { read: true })));
         await fetchNotifications();
-        setNotificationPopupDismissed(true);
+        setDismissedNotificationKey(notificationSnoozeKey);
     };
 
     const markNotificationRead = async (notification) => {
@@ -148,7 +153,7 @@ export default function Dashboard() {
 
     const snoozeNotifications = () => {
         sessionStorage.setItem(notificationSnoozeKey, 'true');
-        setNotificationPopupDismissed(true);
+        setDismissedNotificationKey(notificationSnoozeKey);
     };
 
     return (
