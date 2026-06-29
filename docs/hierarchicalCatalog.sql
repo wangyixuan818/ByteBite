@@ -7,7 +7,8 @@ insert into categories (name, default_storage, pantry_days, fridge_days, freezer
   ('Fruits', 'fridge', 5, 10, 30),      -- some fruits ok in pantry
   ('Bakes', 'pantry', 1, 5, 30),
   ('Beverages', 'fridge', 0, 14, null),
-  ('Condiments', 'pantry', 365, 365, null);
+  ('Condiments', 'pantry', 365, 365, null),
+  ('Fermented Food', 'fridge', 30, 60, null);
 
 -- Products (food_types: middle level)
 insert into food_types (name, category_id, default_storage, pantry_days, fridge_days, freezer_days) values
@@ -41,7 +42,10 @@ insert into food_types (name, category_id, default_storage, pantry_days, fridge_
   ('Bread', (select id from categories where name='Bakes'), 'pantry', 4, 7, 90),
   
   -- Beverages
-  ('Orange Juice', (select id from categories where name='Beverages'), 'fridge', null, 7, null);
+  ('Orange Juice', (select id from categories where name='Beverages'), 'fridge', null, 7, null),
+
+  -- Fermented food
+  ('Pickled Daikon', (select id from categories where name='Fermented Food'), 'fridge', 30, 60, null);
 
 
 

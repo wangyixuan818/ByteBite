@@ -1,67 +1,98 @@
- import {useState} from 'react';
- import axios from 'axios';
- import { Link } from 'react-router-dom'
- import { useAuthentication } from '../context/AuthenticationContext';
- import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthentication } from '../context/AuthenticationContext';
+import BrandTitle from '../components/BrandTitle';
 
- export default function SignupPage() {
-    const [display_name, setDisplayName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
+export default function SignupPage() {
+    const [displayName, setDisplayName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [confirmPw, setConfirmPw] = useState('')
     const { login } = useAuthentication();
     const navigate = useNavigate();
 
-    const handleRequest = async (e) => {
-        e.preventDefault();
-        setError("");
+    const handleRequest = async (event) => {
+        event.preventDefault();
+        setError('');
 
         if (password.length < 8) {
-            setError("Password length must be at least 8 characters");
+            setError('Password length must be at least 8 characters.');
             return;
         }
 
-        try {
-            /*
-            const fakeResponse = {
-                user: { id: 1, email: email, display_name: "Test User" },
-                token: "fake-token-123"
-            };
-            login(fakeResponse.user, fakeResponse.token);
-            // temporarily commented out post for testing
-            */
-            const response = await axios.post("/api/v1/auth/signup", {display_name, email, password});
-            login(response.data.user, response.data.token);
-
-            navigate('/dashboard');
-        } catch (err) {
-            const code = err.response?.data?.error.code;
-            if (code === "VALIDATION_ERROR") {
-                setError("Please make sure your email address is valid.");
-            } else if (code === "EMAIL_ALREADY_EXISTS") {
-                setError("This email is already in use.");
-            } else {
-                setError("Please try again.")
-            }
+        if (confirmPw !==  password) {
+            setError('Passwords do not match.');
+            return;
         }
 
+        setSubmitting(true);
+        try {
+            const response = await axios.post('/api/v1/auth/signup', {
+                display_name: displayName,
+                email,
+                password,
+            });
+            login(response.data.user, response.data.token);
+            navigate('/dashboard');
+        } catch (err) {
+            const code = err.response?.data?.error?.code;
+            if (code === 'VALIDATION_ERROR') {
+                setError('Please make sure your email address is valid.');
+            } else if (code === 'EMAIL_ALREADY_EXISTS') {
+                setError('This email is already in use.');
+            } else {
+                setError('Please try again.');
+            }
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
-        <div>
-            <h1>ByteBite</h1>
-            <form onSubmit={handleRequest}>
-                {error ? <p>{error}</p>: null}
-                <input type='text' value={display_name} onChange={e => setDisplayName(e.target.value)} placeholder='Display Name' required/>      
-                <br />
-                <input type='email' value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required />
-                <br />
-                <input type='password' value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required />
-                <br />
-                <button type='submit'>Sign up</button>
-                <br />
-                <Link to="/login">Already have an account? Log in now</Link>
-            </form>
-        </div>
+        <main className="auth-page">
+            <BrandTitle className="auth-brand" to="/" />
+            <section className="auth-panel">
+                <div className="auth-copy">
+                    <p className="auth-kicker">Create account</p>
+                    <h1>Sign up</h1>
+                    <p>Start a simple household inventory before the next grocery run.</p>
+                </div>
+
+                <form className="form-stack" onSubmit={handleRequest}>
+                    {error && <p className="message error" role="alert">{error}</p>}
+
+                    <label>
+                        Display name
+                        <input type="text" value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Display Name" required />
+                    </label>
+
+                    <label>
+                        Email
+                        <input type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="Email" required />
+                    </label>
+
+                    <label>
+                        Password
+                        <input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Password" required />
+                    </label>
+
+                    <label>
+                        Reconfirm password
+                        <input type="password" value={confirmPw} onChange={event => setConfirmPw(event.target.value)} placeholder="Confirm your password again" required />
+                    </label>
+
+                    <button className="button" type="submit" disabled={submitting}>
+                        {submitting ? 'Creating account...' : 'Sign up'}
+                    </button>
+
+                    <p className="auth-helper">
+                        Already have an account? <Link to="/login">Log in now</Link>
+                    </p>
+                </form>
+            </section>
+        </main>
     );
- }
+}

@@ -311,6 +311,7 @@ router.get('/:id', async (req, res) => {
 const updateItemSchema = z.object({
     name: z.string().min(1).optional(),
     food_type_id: z.number().int().optional(),
+    brand_product_id: z.number().int().positive().nullable().optional(),
     quantity: z.number().int().positive().optional(),
     unit: z.string().max(50).optional(),
     added_date: z.string().optional(),
@@ -330,7 +331,7 @@ router.patch('/:id', async (req, res) => {
         }});
     }
 
-    const { name, food_type_id, quantity, unit, added_date,expiry_date, storage, status } = parsed.data;
+    const { name, food_type_id, brand_product_id, quantity, unit, added_date, expiry_date, storage, status } = parsed.data;
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
@@ -338,17 +339,18 @@ router.patch('/:id', async (req, res) => {
             `UPDATE items SET
                 name = COALESCE($1, name),
                 food_type_id = COALESCE($2, food_type_id),
-                quantity = COALESCE($3, quantity),
-                unit = COALESCE($4, unit),
-                added_date = COALESCE($5, added_date),
-                expiry_date = COALESCE($6, expiry_date),
-                expiry_is_estimated = CASE WHEN $6::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
-                storage = COALESCE($7, storage),
-                status = COALESCE($8, status),
+                brand_product_id = COALESCE($3, brand_product_id),
+                quantity = COALESCE($4, quantity),
+                unit = COALESCE($5, unit),
+                added_date = COALESCE($6, added_date),
+                expiry_date = COALESCE($7, expiry_date),
+                expiry_is_estimated = CASE WHEN $7::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
+                storage = COALESCE($8, storage),
+                status = COALESCE($9, status),
                 updated_at = now()
-            WHERE id = $9 AND household_id = $10
+            WHERE id = $10 AND household_id = $11
             RETURNING *`,
-            [name ?? null, food_type_id ?? null, quantity ?? null, unit ?? null, added_date ?? null, expiry_date ?? null,
+            [name ?? null, food_type_id ?? null, brand_product_id ?? null, quantity ?? null, unit ?? null, added_date ?? null, expiry_date ?? null,
                 storage ?? null, status ?? null, req.params.id, householdId]
         );
         if (updateRes.rows.length === 0) {

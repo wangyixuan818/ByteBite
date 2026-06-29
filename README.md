@@ -28,9 +28,10 @@ ByteBite requires a live PostgreSQL instance to run. Set this up first to get yo
 1. Create a free account and a new project on the [Supabase Dashboard](https://supabase.com).
 2. Go to the **SQL Editor** tab in your Supabase project sidebar.
 3. Paste the contents of `docs/schema.sql` into the editor and click **Run** to generate your database tables.
-4. Open a new SQL query tab, paste the contents of `docs/foodTypes.sql`, and click **Run** to populate your baseline `food_types` registry.
-5. Click the blue **Connect** button in the top right corner of your Supabase dashboard header.
-6. In the modal that appears, select **Direct connection** (or **Session Pooler** if your local network doesn't support IPv6), copy the URI string, and make sure to replace `[YOUR-PASSWORD]` with your actual database password. Keep this string handy for Step 3.
+4. Open a new SQL query tab, paste the contents of `docs/foodTypes.sql`, and click **Run** to populate your baseline categories, food types, and brand products.
+5. To enable recipe recommendations, run `docs/recipes.sql`, then run `docs/seed_recipes.sql`.
+6. Click the blue **Connect** button in the top right corner of your Supabase dashboard header.
+7. In the modal that appears, select **Direct connection** (or **Session Pooler** if your local network doesn't support IPv6), copy the URI string, and make sure to replace `[YOUR-PASSWORD]` with your actual database password. Keep this string handy for Step 3.
 
 
 ### Step 2: Clone the Repository
