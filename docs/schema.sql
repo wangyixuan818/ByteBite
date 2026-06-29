@@ -79,6 +79,7 @@ create table items (
   name                text not null,
   food_type_id        bigint references food_types(id) on delete set null,
   brand_product_id    bigint references brand_products(id) on delete set null,
+    category_id       bigint references categories(id) on delete set null,
   quantity            numeric,
   unit                text,
   added_date          date    not null default current_date,
@@ -93,6 +94,22 @@ create table items (
 );
 
 
+-- 8. notifications: in-app alerts surfaced on the dashboard
+create table notifications (
+  id                bigint generated always as identity primary key,
+  user_id           bigint not null references users(id) on delete cascade,
+  item_id           bigint references items(id) on delete cascade,
+  type              text not null check (type in ('expiring_soon', 'expiring_today')),
+  message           text not null,
+  notification_date date not null default current_date,
+  read_at           timestamptz,
+  created_at        timestamptz not null default now(),
+  unique (user_id, item_id, type, notification_date)
+);
+
+alter table notifications enable row level security;
+
+
 
 -- Row-Level Security
 -- Enabled on every table
@@ -104,3 +121,4 @@ alter table user_household enable row level security;
 alter table items          enable row level security;
 alter table categories     enable row level security;
 alter table brand_products enable row level security;
+alter table notifications enable row level security;

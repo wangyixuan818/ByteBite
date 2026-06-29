@@ -142,6 +142,35 @@ Hard delete (we'll revisit if Usage Analytics gets added).
 
 The per-storage `*_days` fields may be `null` if that storage location isn't applicable for the food (e.g. milk has no `pantry_days`). When all three are null on a row, the cascade falls through to the next tier in the hierarchy.
 
+## Notifications  (scoped to current user)
 
+In-app notifications surfaced on the dashboard. Created automatically by a daily 8am background job for items entering the 3-day "expiring soon" window; never created via the API. Each notification ties a recipient to an item and is deduplicated per day so the job is safely re-runnable.
+
+### GET /notifications  (auth required)
+List the current user's notifications, unread first then most recent.
+- 200: `[ <notification>, ... ]`
+- Errors: 401 `UNAUTHENTICATED`
+
+### PATCH /notifications/:id  (auth required)
+Flip the read state of a notification. `read: true` sets `read_at` to now; `read: false` clears it back to null.
+- Request: `{ "read": boolean }`
+- 200: `{ "notification": <notification> }`
+- Errors: 400 `VALIDATION_ERROR`, 404 `NOT_FOUND` (also when the id belongs to another user)
+
+
+## The `<notification>` object
+```json
+{
+  "id": 9,
+  "item_id": 42,
+  "type": "expiring_soon",
+  "message": "Milk expires in 2 days",
+  "notification_date": "2026-06-19",
+  "read_at": null,
+  "created_at": "2026-06-19T00:00:05Z"
+}
+```
+
+`type` is one of `expiring_today` or `expiring_soon`. `read_at` is `null` for unread, a timestamp when marked read. `notification_date` is the day the notification was created.
 
 

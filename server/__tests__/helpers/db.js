@@ -3,6 +3,7 @@ const pool = require('../../db');
 
 // delete in reverse order of dependencies (so that we dont have foreign key constraint issues)
 async function cleanDatabase() {
+    await pool.query('DELETE FROM notifications');
     await pool.query('DELETE FROM items');
     await pool.query('DELETE FROM brand_products');
     await pool.query('DELETE FROM food_types');

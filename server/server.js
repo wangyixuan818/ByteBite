@@ -1,4 +1,5 @@
 const app = require('./app');
+require('./cron/expiry-alerts');
 
 // to start the server
 const PORT = process.env.PORT || 5001;              
