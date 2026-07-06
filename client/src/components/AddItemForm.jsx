@@ -10,7 +10,7 @@ const blankDetails = {
     unit: '',
     storage: '',
     expiryDate: '',
-    estimateExpiry: true,
+    // estimateExpiry: true,  
     saveFoodType: false,
 };
 
@@ -52,7 +52,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         unit: itemToEdit.unit ?? '',
         storage: itemToEdit.storage ?? '',
         expiryDate: toDateInput(itemToEdit.expiry_date),
-        estimateExpiry: false,
+        // estimateExpiry: false,
         saveFoodType: false,
     } : blankDetails);
     const [submitting, setSubmitting] = useState(false);
@@ -185,7 +185,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         };
 
         if (!isEditing && selectedCategory?.id) payload.category_id = selectedCategory.id;
-        if (!details.estimateExpiry && details.expiryDate) payload.expiry_date = details.expiryDate;
+        if (details.expiryDate) payload.expiry_date = details.expiryDate;
 
         return payload;
     };
@@ -282,7 +282,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 </label>
 
                 <label>
-                    Brand <small>(optional)</small>
+                    <span>Expiry date <small>(optional)</small></span>
                     <select value={selectedBrandProductId}
                             onChange={event => setSelectedBrandProductId(event.target.value)}>
                         <option value="">No brand / not sure</option>
@@ -325,27 +325,21 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                         <option value="pantry">Pantry</option>
                     </select>
                 </label>
-
+                
                 {!isEditing && (
-                    <label className={`estimate-expiry-card ${details.estimateExpiry ? 'active' : ''}`}>
-                        <input
-                            type="checkbox"
-                            checked={details.estimateExpiry}
-                            onChange={event => updateDetail('estimateExpiry', event.target.checked)}
-                        />
+                    <div className="estimate-expiry-card active" aria-live="polite">
                         <span className="estimate-expiry-illustration" aria-hidden="true">
                             <span className="estimate-spark">!</span>
                         </span>
                         <span className="estimate-expiry-copy">
-                            <strong>Smart expiry estimate</strong>
-                            <small>Let ByteBite pick an expiry date from food type, storage, and brand shelf-life data.</small>
+                            <strong>Smart expiry available</strong>
+                            <small>Leave the expiry field below blank and ByteBite will estimate a date from food type, storage, and brand shelf-life.</small>
                         </span>
-                        <span className="estimate-expiry-status">{details.estimateExpiry ? 'On' : 'Off'}</span>
-                    </label>
+                    </div>
                 )}
 
                 {(isEditing || !details.estimateExpiry) && <label>
-                    Expiry date
+                    <span>Expiry date <small>(optional)</small></span>
                     <input type="date" value={details.expiryDate} onChange={event => updateDetail('expiryDate', event.target.value)} />
                 </label>}
 
