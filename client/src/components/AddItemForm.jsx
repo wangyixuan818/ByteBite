@@ -41,7 +41,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const [brandProducts, setBrandProducts] = useState([]);
     const [selectedBrandProductId, setSelectedBrandProductId] = useState('');
     // MS3 revisit: free-typed brand input is paused because brand-specific expiry needs curated shelf-life data.
-    // const [brandName, setBrandName] = useState('');
+    const [brandName, setBrandName] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedFoodType, setSelectedFoodType] = useState(null);
     const [customCategoryName, setCustomCategoryName] = useState('');
@@ -81,6 +81,8 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
                 if (itemToEdit?.brand_product_id) {
                     setSelectedBrandProductId(String(itemToEdit.brand_product_id));
+                    const existingBrand = brandRes.data.find(b => Number(b.id) === Number(itemToEdit.brand_product_id));
+                    if (existingBrand) setBrandName(existingBrand.brand);
                 }
             } catch {
                 setError('Failed to load the food library.');
@@ -181,6 +183,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             unit: details.unit.trim() || undefined,
             storage: details.storage || undefined,
             food_type_id: foodTypeId || undefined,
+            brand: brandName.trim() || undefined,
             brand_product_id: selectedBrandProductId ? Number(selectedBrandProductId) : undefined,
         };
 
@@ -282,25 +285,21 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 </label>
 
                 <label>
-                    <span>Expiry date <small>(optional)</small></span>
-                    <select value={selectedBrandProductId}
-                            onChange={event => setSelectedBrandProductId(event.target.value)}>
-                        <option value="">No brand / not sure</option>
-                        {filteredBrands.map(brand => (
-                            <option key={brand.id}
-                                    value={brand.id}>{brand.brand}
-                            </option>
-                        ))}
-                    </select>
-                    <span className="helper-text">Optional. Selecting an existing brand can improve expiry estimation when the brand has curated shelf-life data.</span>
-                    {/* MS3 revisit: free-typed brand input is paused because unsaved brands do not have reliable expiry rules yet.
+                    <span>Brand <small>(optional)</small></span>
                     <input
+                        type="text"
                         value={brandName}
                         onChange={event => setBrandName(event.target.value)}
                         placeholder="e.g. Meiji, FairPrice, Marigold"
                         list="brand-options"
+                        autoComplete="off"
                     />
-                    */}
+                    <datalist id="brand-options">
+                        {filteredBrands.map(brand => (
+                            <option key={brand.id} value={brand.brand} />
+                        ))}
+                    </datalist>
+                    <span className="helper-text">Type any brand. Picking a known brand can improve expiry estimation.</span>
                 </label>
 
                 <div className="form-row">
