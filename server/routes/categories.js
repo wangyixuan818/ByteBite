@@ -1,16 +1,20 @@
 const express = require('express');
 const pool = require('../db');
 const requireAuth = require('../middleware/auth');
+const { getHouseholdId } = require('../helpers/household');
 
 const router = express.Router();
 router.use(requireAuth);
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
     try {
+        const householdId = await getHouseholdId(req.user.userId);
         const result = await pool.query(
-            `SELECT id, name, default_storage, pantry_days, fridge_days, freezer_days
+            `SELECT id, name, default_storage, pantry_days, fridge_days, freezer_days, household_id
              FROM categories
-             ORDER BY name`
+             WHERE household_id = $1 OR household_id IS NULL
+             ORDER BY name`,
+            [householdId]
         );
         return res.status(200).json(result.rows);
     } catch (err) {
@@ -41,11 +45,12 @@ router.post('/', async(req, res) => {
     }
 
     try {
+        const householdId = await getHouseholdId(req.user.userId);
         const result = await pool.query(
-            `INSERT INTO categories(name, default_storage)
-             VALUES($1, $2)
-             RETURNING id, name, default_storage, pantry_days, fridge_days, freezer_days`,
-             [name.trim(), default_storage]
+            `INSERT INTO categories(name, default_storage, household_id)
+             VALUES($1, $2, $3)
+             RETURNING id, name, default_storage, pantry_days, fridge_days, freezer_days, household_id`,
+             [name.trim(), default_storage, householdId]
         );
 
         return res.status(201).json({
