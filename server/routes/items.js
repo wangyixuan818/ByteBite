@@ -4,19 +4,10 @@ const pool = require('../db');
 const reqAuth = require('../middleware/auth');
 const { formatDate, todayDate, addDays } = require('../helpers/date');
 const { pickDays } = require('../helpers/auto-expiry');
+const { getHouseholdId } = require('../helpers/household');
 
 const router = express.Router();
 router.use(reqAuth);
-
-
-async function getHouseholdId(userId) {
-    const res = await pool.query(
-        `SELECT household_id FROM user_household WHERE user_id = $1 LIMIT 1`,
-        [userId]
-    );
-    return res.rows[0]?.household_id;
-}
-
 
 
 router.get('/', async (req, res) => {
