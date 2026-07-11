@@ -102,13 +102,13 @@ router.post('/', async (req, res) => {
         // Runs regardless of whether an expiry date was provided, so the brand is never silently dropped
         // foreign/invalid brand_product_id is always scrubbed before insert
         let brandShelfRow = null;
-        if (brand && food_type_id && !brand_product_id) {
+        if (brand_product_id) {
             const r = await pool.query(
                 `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
                 FROM brand_products
-                WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2)
-                    AND (household_id = $3 OR household_id IS NULL)`,
-                [food_type_id, brand, householdId]
+                WHERE id = $1 
+                    AND (household_id = $2 OR household_id IS NULL)`,
+                [brand_product_id, householdId]
             );
             if (r.rows[0]) {
                 brandShelfRow = r.rows[0];
@@ -234,7 +234,6 @@ router.post('/', async (req, res) => {
                     shelfLifeRow = row;
                     matchedBrandId = row.id;
                     matchedFoodTypeId = row.food_type_id;
-                    matchedCategoryId = row.category_id;
                 }
 
                 // second tier: fall back to food_type match (product level)
