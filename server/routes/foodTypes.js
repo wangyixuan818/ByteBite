@@ -2,17 +2,22 @@ const express = require('express');
 const { z } = require('zod');
 const pool = require('../db');
 const reqAuth = require('../middleware/auth');
+const { getHouseholdId } = require('../helpers/household');
 
 const router = express.Router();
 router.use(reqAuth);
 
 router.get('/', async (req, res) => {
     try {
+        const householdId = await getHouseholdId(req.user.userId);
         const result = await pool.query(
             `SELECT id, name, category_id, default_storage,
-                    pantry_days, fridge_days, freezer_days
-            FROM food_types 
-            ORDER BY name`);
+                    pantry_days, fridge_days, freezer_days, household_id
+            FROM food_types
+            WHERE household_id = $1 OR household_id IS NULL
+            ORDER BY name`,
+            [householdId]
+        );
         return res.status(200).json(result.rows);
     } catch (err) {
         console.error(err);
@@ -45,12 +50,13 @@ router.post('/', async (req, res) => {
     const { name, category_id, default_storage, pantry_days, fridge_days, freezer_days } = parsed.data;
 
     try {
+        const householdId = await getHouseholdId(req.user.userId);
         const result = await pool.query(
             `INSERT INTO food_types
-                (name, category_id, default_storage, pantry_days, fridge_days, freezer_days)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             RETURNING id, name, category_id, default_storage, pantry_days, fridge_days, freezer_days`,
-            [name.trim(), category_id, default_storage ?? null, pantry_days ?? null, fridge_days ?? null, freezer_days ?? null]
+                (name, category_id, default_storage, pantry_days, fridge_days, freezer_days, household_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING id, name, category_id, default_storage, pantry_days, fridge_days, freezer_days, household_id`,
+            [name.trim(), category_id, default_storage ?? null, pantry_days ?? null, fridge_days ?? null, freezer_days ?? null, householdId]
         );
         return res.status(201).json({ food_type: result.rows[0] });
     } catch (err) {

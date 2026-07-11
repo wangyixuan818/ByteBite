@@ -128,14 +128,28 @@ router.post('/', async (req, res) => {
                     const r = await pool.query(
                         `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
                         FROM brand_products
-                        WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2)`,
-                        [food_type_id, brand]
+                        WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2) 
+                        AND (household_id = $3 OR household_id IS NULL)`,
+                        [food_type_id, brand, householdId]
                     );
                     if (r.rows[0]) {
                         shelfLifeRow = r.rows[0];
                         matchedBrandId = r.rows[0].id;
                         matchedFoodTypeId = food_type_id;
                         matchedCategoryId = r.rows[0].category_id;
+                    } else {
+                        // typed brand is new for this food type --> create it as private
+                        // (household-scoped) brand so only this household sees it as a suggestion
+                        const created = await pool.query(
+                            `INSERT INTO brand_products (brand, food_type_id, household_id)
+                            VALUES ($1, $2, $3)
+                            RETURNING id`,
+                            [brand.trim(), food_type_id, householdId]
+                        );
+                        matchedBrandId = created.rows[0].id;
+                        matchedFoodTypeId = food_type_id;
+                        // no shelfLifeRow so new brand has no shelf-life data; cascade falls
+                        // back to food_type and category for shelf-life data
                     }
                 }
 
@@ -191,8 +205,10 @@ router.post('/', async (req, res) => {
                     FROM brand_products bp
                     JOIN food_types ft ON ft.id = bp.food_type_id
                     WHERE $1 ILIKE '%' || bp.brand || '%' AND $1 ILIKE '%' || ft.name || '%'
+                        AND (bp.household_id = $2 OR bp.household_id IS NULL)
+                        AND (ft.household_id = $2 OR ft.household_id IS NULL)
                     LIMIT 1`,
-                    [name]
+                    [name, householdId]
                 );
 
                 if (brandRes.rows[0]) {
@@ -209,9 +225,10 @@ router.post('/', async (req, res) => {
                         `SELECT id, category_id, fridge_days, pantry_days, freezer_days, default_storage
                         FROM food_types
                         WHERE $1 ILIKE '%' || name || '%'
+                            AND (household_id = $2 OR household_id IS NULL)
                         ORDER BY LENGTH(name) DESC
                         LIMIT 1`,
-                        [name]
+                        [name, householdId]
                     );
 
                     if (ftRes.rows[0]) {
@@ -224,8 +241,10 @@ router.post('/', async (req, res) => {
                         if (pickDays(row, finalStorage ?? row.default_storage) === null && row.category_id) {
                             const catRes = await pool.query(
                                 `SELECT fridge_days, pantry_days, freezer_days, default_storage
-                                FROM categories WHERE id = $1`,
-                                [row.category_id]
+                                FROM categories WHERE id = $1
+                                    AND (household_id = $2 OR household_id IS NULL)
+                                `,
+                                [row.category_id, householdId]
                             );
                             if (catRes.rows[0]) {
                                 shelfLifeRow = catRes.rows[0];
