@@ -99,10 +99,25 @@ router.post('/', async (req, res) => {
         let matchedCategoryId = category_id ?? null;
 
         // Resolve typed brand text 0 --> brand_products row
-        // Runs regardless of whether an expiry date was provided,
-        // so the brand is never silently dropped
+        // Runs regardless of whether an expiry date was provided, so the brand is never silently dropped
+        // foreign/invalid brand_product_id is always scrubbed before insert
         let brandShelfRow = null;
         if (brand && food_type_id && !brand_product_id) {
+            const r = await pool.query(
+                `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
+                FROM brand_products
+                WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2)
+                    AND (household_id = $3 OR household_id IS NULL)`,
+                [food_type_id, brand, householdId]
+            );
+            if (r.rows[0]) {
+                brandShelfRow = r.rows[0];
+                matchedBrandId = r.rows[0].id;
+                matchedFoodTypeId = r.rows[0].food_type_id;
+            } else {
+                matchedBrandId = null; 
+            }
+        } else if (brand && food_type_id) {
             const r = await pool.query(
                 `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
                 FROM brand_products
@@ -116,44 +131,45 @@ router.post('/', async (req, res) => {
             } else {
                 // new brand for this food type --> create as private to this household
                 const created = await pool.query(
-                    `INSERT INTO brand_products (brand, food_type_id, household_id)
-                    VALUES ($1, $2, $3)
-                    RETURNING id`,
-                    [brand.trim(), food_type_id, householdId]
-                );
-                matchedBrandId = created.rows[0].id;
+                        `INSERT INTO brand_products (brand, food_type_id, household_id)
+                        VALUES ($1, $2, $3)
+                        RETURNING id`,
+                        [brand.trim(), food_type_id, householdId]
+                    );
+                    matchedBrandId = created.rows[0].id;
+                }
             }
-        }
 
         // inserting the automatic expiry logic here 
         // runs only if no expiry date added
         if (!resolvedExpiryDate) {
-            let shelfLifeRow = null; // stores entire row retrieved
+            // reuse the brand row found during brand resolution (id or text), if any
+            let shelfLifeRow = brandShelfRow; // stores entire row retrieved
 
-            // path 1: explicit IDs given
-            if (brand_product_id) {
+            // path 1: explicit IDs given --> removed in M3 as it is moved outside
+            /* if (brand_product_id) {
                 // go straight to lowest lvl query
                 const r = await pool.query(
                     `SELECT fridge_days, pantry_days, freezer_days, default_storage, food_type_id
-                    FROM brand_products WHERE id = $1`,
-                    [brand_product_id]
+                    FROM brand_products
+                    WHERE id = $1 AND (household_id = $2 OR household_id IS NULL)`,
+                    [brand_product_id, householdId]
                 );
                 if (r.rows[0]) {
                     shelfLifeRow = r.rows[0];
                     matchedBrandId = brand_product_id;
                     matchedFoodTypeId = r.rows[0].food_type_id;
-                    matchedCategoryId = r.rows[0].category_id; 
                 } else {
                     matchedBrandId = null;
                 }
-            }
+            } */ 
 
             // path 2: User picked a product, maybe with a brand text
             if (!shelfLifeRow && food_type_id) {
                 // lowest lvl: check if there is a brand variant matching the typed brand
-                if (brandShelfRow) {
+                /* if (brandShelfRow) {
                     shelfLifeRow = brandShelfRow;
-                }
+                } */ // removed in M3 as it is moved outside
 
                 // otherwise we just use the product itself
                 if (!shelfLifeRow) {
