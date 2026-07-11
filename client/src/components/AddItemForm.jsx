@@ -40,7 +40,6 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const [foodTypes, setFoodTypes] = useState([]);
     const [brandProducts, setBrandProducts] = useState([]);
     const [selectedBrandProductId, setSelectedBrandProductId] = useState('');
-    // MS3 revisit: free-typed brand input is paused because brand-specific expiry needs curated shelf-life data.
     const [brandName, setBrandName] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedFoodType, setSelectedFoodType] = useState(null);
@@ -337,10 +336,11 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                     </div>
                 )}
 
-                {(isEditing || !details.estimateExpiry) && <label>
+                <label>
                     <span>Expiry date <small>(optional)</small></span>
                     <input type="date" value={details.expiryDate} onChange={event => updateDetail('expiryDate', event.target.value)} />
-                </label>}
+                    <span className="helper-text">Leave blank and ByteBite will estimate one for you.</span>
+                </label>
 
                 {!isEditing && foodTypeIsCustom && <label className="inline-choice">
                     <input type="checkbox" checked={details.saveFoodType} onChange={event => updateDetail('saveFoodType', event.target.checked)} />

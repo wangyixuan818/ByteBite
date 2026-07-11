@@ -98,6 +98,33 @@ router.post('/', async (req, res) => {
         let matchedFoodTypeId = food_type_id ?? null;
         let matchedCategoryId = category_id ?? null;
 
+        // Resolve typed brand text 0 --> brand_products row
+        // Runs regardless of whether an expiry date was provided,
+        // so the brand is never silently dropped
+        let brandShelfRow = null;
+        if (brand && food_type_id && !brand_product_id) {
+            const r = await pool.query(
+                `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
+                FROM brand_products
+                WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2)
+                    AND (household_id = $3 OR household_id IS NULL)`,
+                [food_type_id, brand, householdId]
+            );
+            if (r.rows[0]) {
+                brandShelfRow = r.rows[0];
+                matchedBrandId = r.rows[0].id;
+            } else {
+                // new brand for this food type --> create as private to this household
+                const created = await pool.query(
+                    `INSERT INTO brand_products (brand, food_type_id, household_id)
+                    VALUES ($1, $2, $3)
+                    RETURNING id`,
+                    [brand.trim(), food_type_id, householdId]
+                );
+                matchedBrandId = created.rows[0].id;
+            }
+        }
+
         // inserting the automatic expiry logic here 
         // runs only if no expiry date added
         if (!resolvedExpiryDate) {
@@ -124,33 +151,8 @@ router.post('/', async (req, res) => {
             // path 2: User picked a product, maybe with a brand text
             if (!shelfLifeRow && food_type_id) {
                 // lowest lvl: check if there is a brand variant matching the typed brand
-                if (brand) {
-                    const r = await pool.query(
-                        `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
-                        FROM brand_products
-                        WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2) 
-                        AND (household_id = $3 OR household_id IS NULL)`,
-                        [food_type_id, brand, householdId]
-                    );
-                    if (r.rows[0]) {
-                        shelfLifeRow = r.rows[0];
-                        matchedBrandId = r.rows[0].id;
-                        matchedFoodTypeId = food_type_id;
-                        matchedCategoryId = r.rows[0].category_id;
-                    } else {
-                        // typed brand is new for this food type --> create it as private
-                        // (household-scoped) brand so only this household sees it as a suggestion
-                        const created = await pool.query(
-                            `INSERT INTO brand_products (brand, food_type_id, household_id)
-                            VALUES ($1, $2, $3)
-                            RETURNING id`,
-                            [brand.trim(), food_type_id, householdId]
-                        );
-                        matchedBrandId = created.rows[0].id;
-                        matchedFoodTypeId = food_type_id;
-                        // no shelfLifeRow so new brand has no shelf-life data; cascade falls
-                        // back to food_type and category for shelf-life data
-                    }
+                if (brandShelfRow) {
+                    shelfLifeRow = brandShelfRow;
                 }
 
                 // otherwise we just use the product itself
