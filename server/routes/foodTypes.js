@@ -51,6 +51,20 @@ router.post('/', async (req, res) => {
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
+        
+        // reuse an existing food type with the same name (public, or already in my household)
+        const existing = await pool.query(
+            `SELECT id, name, category_id, default_storage, pantry_days, fridge_days, freezer_days, household_id
+             FROM food_types
+             WHERE LOWER(name) = LOWER($1) AND (household_id IS NULL OR household_id = $2)
+             ORDER BY household_id NULLS FIRST
+             LIMIT 1`,
+            [name.trim(), householdId]
+        );
+        if (existing.rows[0]) {
+            return res.status(200).json({ food_type: existing.rows[0] });
+        }
+
         const result = await pool.query(
             `INSERT INTO food_types
                 (name, category_id, default_storage, pantry_days, fridge_days, freezer_days, household_id)
@@ -61,6 +75,14 @@ router.post('/', async (req, res) => {
         return res.status(201).json({ food_type: result.rows[0] });
     } catch (err) {
         console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({
+                error: {
+                    code: 'FOOD_TYPE_ALREADY_EXISTS',
+                    message: 'This food type already exists'
+                }
+            });
+        }
         return res.status(500).json({ error: {
             code: 'SERVER_ERROR',
             message: 'Something went wrong'

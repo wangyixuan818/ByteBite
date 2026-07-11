@@ -46,6 +46,18 @@ router.post('/', async(req, res) => {
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
+        // reuse an existing category with the same name (public, or already in my household)
+        const existing = await pool.query(
+            `SELECT id, name, default_storage, pantry_days, fridge_days, freezer_days, household_id
+             FROM categories
+             WHERE LOWER(name) = LOWER($1) AND (household_id IS NULL OR household_id = $2)
+             ORDER BY household_id NULLS FIRST
+             LIMIT 1`,
+            [name.trim(), householdId]
+        );
+        if (existing.rows[0]) {
+            return res.status(200).json({ category: existing.rows[0] });
+        }
         const result = await pool.query(
             `INSERT INTO categories(name, default_storage, household_id)
              VALUES($1, $2, $3)
