@@ -104,7 +104,7 @@ router.post('/', async (req, res) => {
         let brandShelfRow = null;
         if (brand_product_id) {
             const r = await pool.query(
-                `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
+                `SELECT id, food_type_id, fridge_days, pantry_days, freezer_days, default_storage
                 FROM brand_products
                 WHERE id = $1 
                     AND (household_id = $2 OR household_id IS NULL)`,
