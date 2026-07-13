@@ -44,6 +44,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedFoodType, setSelectedFoodType] = useState(null);
     const [customCategoryName, setCustomCategoryName] = useState('');
+    const [customFoodTypeName, setCustomFoodTypeName] = useState('');
     const [foodTypeIsCustom, setFoodTypeIsCustom] = useState(false);
     const [categoryIsCustom, setCategoryIsCustom] = useState(false);
     const [details, setDetails] = useState(() => itemToEdit ? {
@@ -113,6 +114,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const selectCategory = (category) => {
         setSelectedCategory(category);
         setCategoryIsCustom(false);
+        setCustomFoodTypeName('');      
         setSelectedFoodType(null);
         setSelectedBrandProductId('');
         setStep('food-type');
@@ -127,12 +129,20 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         setStep('details');
     };
 
-    const openCustomFoodType = () => {
+    const continueCustomFoodType = (event) => {
+        event.preventDefault();
+        const trimmed = customFoodTypeName.trim();
+        const clash = filteredTypes.some(t => t.name.toLowerCase() === trimmed.toLowerCase());
+        if (clash) {
+            setError('That food type already exists! Pick one from the list below.');
+            return;
+        }
         setSelectedFoodType(null);
         setFoodTypeIsCustom(true);
-        setDetails(blankDetails);
+        setDetails({ ...blankDetails, name: trimmed });   // pre-fill the item Name with the food type
         setSelectedBrandProductId('');
         setStep('details');
+        setError('');
     };
 
     const continueCustomCategory = (event) => {
@@ -263,7 +273,14 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 </div>
                 {!filteredTypes.length && <p className="helper-text">No existing food types in this category.</p>}
                 <div className="flow-divider"><span>or</span></div>
-                <button type="button" className="button secondary" onClick={openCustomFoodType}>+ Customize food type</button>
+                <form className="form-stack" onSubmit={continueCustomFoodType}>
+                    <p className="field-title">Customize food type</p>
+                    <label>
+                        Food type name
+                        <input value={customFoodTypeName} onChange={event => setCustomFoodTypeName(event.target.value)} placeholder="e.g. Bak Kwa" required />
+                    </label>
+                    <button className="button" type="submit">Continue</button>
+                </form>
             </section>}
 
             {step === 'details' && <form className="form-stack" onSubmit={handleSubmit}>
