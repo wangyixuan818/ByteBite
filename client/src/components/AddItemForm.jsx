@@ -45,6 +45,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const [selectedFoodType, setSelectedFoodType] = useState(null);
     const [customCategoryName, setCustomCategoryName] = useState('');
     const [foodTypeIsCustom, setFoodTypeIsCustom] = useState(false);
+    const [categoryIsCustom, setCategoryIsCustom] = useState(false);
     const [details, setDetails] = useState(() => itemToEdit ? {
         name: itemToEdit.name ?? '',
         quantity: itemToEdit.quantity ?? 1,
@@ -111,16 +112,10 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
     const selectCategory = (category) => {
         setSelectedCategory(category);
+        setCategoryIsCustom(false);
         setSelectedFoodType(null);
         setSelectedBrandProductId('');
         setStep('food-type');
-        setError('');
-    };
-
-    const openCustomCategory = () => {
-        setSelectedCategory(null);
-        setCustomCategoryName('');
-        setStep('custom-category');
         setError('');
     };
 
@@ -140,26 +135,26 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         setStep('details');
     };
 
-    const continueCustomCategory = async (event) => {
+    const continueCustomCategory = (event) => {
         event.preventDefault();
-        setSubmitting(true);
-        setError('');
-        try {
-            const response = await createCategory({ name: customCategoryName.trim() });
-            setSelectedCategory(response.data.category);
-            setSelectedFoodType(null);
-            setFoodTypeIsCustom(true);
-            setDetails(blankDetails);
-            setStep('details');
-        } catch (err) {
-            if (err.response?.status === 401) {
-                setError('Please log in again before creating a category.');
-            } else {
-                setError(err.response?.data?.error?.message || 'Could not save this category.');
-            }
-        } finally {
-            setSubmitting(false);
+        
+        // defer the createCategory call to submit time, so we never create a category that the user abandons halfway through
+
+        // make sure the custom category name doesn't clash with an existing one (case-insensitive)
+        const trimmed = customCategoryName.trim();
+        const clash = categories.some(c => c.name.toLowerCase() === trimmed.toLowerCase());
+        if (clash) {
+            setError('That category already exists! Pick one from the list below.');
+            return;
         }
+
+        setSelectedCategory(null);
+        setCategoryIsCustom(true);
+        setSelectedFoodType(null);
+        setFoodTypeIsCustom(true);
+        setDetails(blankDetails);
+        setStep('details');
+        setError('');
     };
 
     const updateDetail = (field, value) => setDetails(current => ({ ...current, [field]: value }));
@@ -167,10 +162,17 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const buildPayload = async () => {
         let foodTypeId = selectedFoodType?.id ?? itemToEdit?.food_type_id;
 
+        // Create the custom category now; buildPayload only runs when the item is actually saved
+        let categoryId = selectedCategory?.id;
+        if (!isEditing && categoryIsCustom) {
+            const catResponse = await createCategory({ name: customCategoryName.trim() });
+            categoryId = catResponse.data.category.id;
+        }
+
         if (!isEditing && foodTypeIsCustom && details.saveFoodType) {
             const typeResponse = await createFoodType({
                 name: details.name.trim(),
-                category_id: selectedCategory.id,
+                category_id: categoryId,
                 default_storage: details.storage || undefined,
             });
             foodTypeId = typeResponse.data.food_type.id;
@@ -186,7 +188,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             brand_product_id: selectedBrandProductId ? Number(selectedBrandProductId) : undefined,
         };
 
-        if (!isEditing && selectedCategory?.id) payload.category_id = selectedCategory.id;
+        if (!isEditing && categoryId) payload.category_id = categoryId;
         if (details.expiryDate) payload.expiry_date = details.expiryDate;
 
         return payload;
@@ -206,7 +208,11 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 onItemAdded?.();
             }
         } catch (err) {
-            setError(err.response?.data?.error?.message || 'Something went wrong. Please try again.');
+            if (err.response?.status === 401) {
+                setError('Please log in again before creating a category.');
+            } else {
+                setError(err.response?.data?.error?.message || 'Something went wrong. Please try again.');
+            } 
         } finally {
             setSubmitting(false);
         }
@@ -229,21 +235,18 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                     ))}
                 </div>
                 <div className="flow-divider"><span>or</span></div>
-                <button type="button" className="button secondary" onClick={openCustomCategory}>+ Customize category</button>
+                <form className="form-stack" onSubmit={continueCustomCategory}>
+                    <p className="field-title">Customize category</p>
+                    <label>
+                        Category name
+                        <input value={customCategoryName} onChange={event => setCustomCategoryName(event.target.value)} placeholder="e.g. Fermented food" required />
+                    </label>
+                    <p className="helper-text">For now, custom categories use fridge as their default storage. We can make this editable later.</p>
+                    <button className="button" disabled={submitting} type="submit">
+                        {submitting ? 'Saving...' : 'Continue'}
+                    </button>
+                </form>
             </section>}
-
-            {step === 'custom-category' && <form className="form-stack" onSubmit={continueCustomCategory}>
-                <button className="text-button align-left" type="button" onClick={() => setStep('category')}>← Categories</button>
-                <p className="field-title">1. Customize category</p>
-                <label>
-                    Category name
-                    <input value={customCategoryName} onChange={event => setCustomCategoryName(event.target.value)} placeholder="e.g. Fermented food" required />
-                </label>
-                <p className="helper-text">For now, custom categories use fridge as their default storage. We can make this editable later.</p>
-                <button className="button" disabled={submitting} type="submit">
-                    {submitting ? 'Saving...' : 'Save category and continue'}
-                </button>
-            </form>}
 
             {step === 'food-type' && <section>
                 <button className="text-button align-left" type="button" onClick={() => setStep('category')}>← Categories</button>
