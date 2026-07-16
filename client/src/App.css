@@ -1344,6 +1344,15 @@
   box-shadow: 0 22px 44px rgba(56, 75, 45, .11);
   backdrop-filter: blur(3px);
 }
+.recipe-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+.recipe-search-pill {
+    flex: 0 0 320px;
+}
 .recipe-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .recipe-card {
   min-height: 280px;

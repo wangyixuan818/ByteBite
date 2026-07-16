@@ -7,7 +7,7 @@ import { AddItemForm } from '../components/AddItemForm';
 import ItemList from '../components/ItemList';
 import NotificationInbox from '../components/NotificationInbox';
 import BrandTitle from '../components/BrandTitle';
-import { foldText, normaliseName} from '../utils/text';
+import { foldText, normaliseName, searchByName } from '../utils/text';
 
 const EXPIRY_STATUSES = new Set([
     'expired',
@@ -77,15 +77,10 @@ export default function Dashboard() {
         return itemList.filter(item => activeSection?.storageValues.includes(item.storage));
     }, [activeInventoryView, activeSection, itemList]);
 
-    const searchedItems = useMemo(() => {
-        const query = foldText(searchText);
-        if (!query) return visibleInventoryItems;
-        return visibleInventoryItems
-            .map(item => ({ item, pos: foldText(item.name).indexOf(query) }))
-            .filter(entry => entry.pos !== -1)          // keep only matches
-            .sort((a, b) => a.pos - b.pos)              // earlier match first
-            .map(entry => entry.item);                  // unwrap back to items
-    }, [searchText, visibleInventoryItems]);
+    const searchedItems = useMemo(
+        () => searchByName(visibleInventoryItems, searchText),
+        [searchText, visibleInventoryItems]
+    );
 
     const inventoryTitle = activeInventoryView === 'all'
         ? 'Full inventory'
