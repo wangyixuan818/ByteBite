@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import ItemCard from './ItemCard';
 
 export default function ItemList({ itemList, onItemDeleted, onItemUpdated, onEditItem }) {

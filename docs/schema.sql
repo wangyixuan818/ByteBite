@@ -85,7 +85,7 @@ create table items (
   name                text not null,
   food_type_id        bigint references food_types(id) on delete set null,
   brand_product_id    bigint references brand_products(id) on delete set null,
-    category_id       bigint references categories(id) on delete set null,
+    category_id       bigint re ferences categories(id) on delete set null,
   quantity            numeric,
   unit                text,
   added_date          date    not null default current_date,

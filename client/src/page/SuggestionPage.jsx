@@ -31,7 +31,7 @@ export default function SuggestionPage() {
         if (mode === 'library') {
             return recipes;
         } 
-        if (mode === 'use-item') {
+        if (mode === 'use-item' && itemId) {
             return matchRecipes(items, recipes, itemId);
         }
         if (mode === 'expiry-suggestion') {
