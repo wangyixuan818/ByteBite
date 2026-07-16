@@ -196,11 +196,27 @@ export default function Dashboard() {
                             <p className="eyebrow">Storage visualizer</p>
                             <h2 id="fridge-visual-title">Open a section</h2>
                         </div>
-                        <span>{itemList.length} item(s)</span>
+                        <div className="visualizer-meta">
+                            <span>{itemList.length} item(s)</span>
+                            <button type="button" className="visualizer-filter-button" aria-label="Filter (coming soon)" disabled>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="4" y1="8" x2="20" y2="8" />
+                                    <circle cx="9" cy="8" r="2.6" fill="#faf6e6" />
+                                    <line x1="4" y1="16" x2="20" y2="16" />
+                                    <circle cx="15" cy="16" r="2.6" fill="#faf6e6" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="fridge-visual">
                         <button type="button" className="fridge-section full-inventory" onClick={() => setActiveInventoryView('all')}>
+                            <span className="full-inventory-search" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                            </span>
                             <span>View full inventory</span>
                             <small>{itemList.length} total</small>
                         </button>

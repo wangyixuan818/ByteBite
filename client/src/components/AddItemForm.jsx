@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addItem, createCategory, createFoodType, getBrands, getCategories, getFoodTypes, updateItem } from '../api/item';
+import { normaliseName } from '../utils/text';
 
 const categoryIcons = import.meta.glob('../assets/bytebite-ui-v2/categories/*.png', { eager: true, import: 'default' });
 const foodTypeIcons = import.meta.glob('../assets/bytebite-ui-v2/foodtypes/*.png', { eager: true, import: 'default' });
@@ -11,7 +12,7 @@ const blankDetails = {
     storage: '',
     expiryDate: '',
     // estimateExpiry: true,  
-    saveFoodType: false,
+    saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
 };
 
 const toDateInput = (value) => value ? String(value).split('T')[0] : '';
@@ -54,7 +55,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         storage: itemToEdit.storage ?? '',
         expiryDate: toDateInput(itemToEdit.expiry_date),
         // estimateExpiry: false,
-        saveFoodType: false,
+        saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
     } : blankDetails);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');

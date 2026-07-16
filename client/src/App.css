@@ -605,6 +605,40 @@
 }
 .fridge-panel { display: flex; flex-direction: column; gap: 16px; }
 .fridge-visual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* panel header filter icon */
+.visualizer-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.visualizer-filter-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    padding: 4px;
+    color: #3a5a3f;
+    cursor: pointer;
+}
+.visualizer-filter-button:disabled {
+    opacity: .55;
+    cursor: default;
+}
+/* search glass on the full inventory tile */
+.fridge-section.full-inventory {
+    position: relative;
+    align-items: center;
+    text-align: center;
+}
+.full-inventory-search {
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    color: #315438;
+}
 .fridge-section {
   min-height: 96px;
   border: 1px solid rgba(83, 112, 76, .30);
