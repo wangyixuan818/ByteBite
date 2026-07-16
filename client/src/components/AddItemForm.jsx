@@ -132,7 +132,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const continueCustomFoodType = (event) => {
         event.preventDefault();
         const trimmed = customFoodTypeName.trim();
-        const clash = filteredTypes.some(t => t.name.toLowerCase() === trimmed.toLowerCase());
+        const clash = filteredTypes.some(t => normaliseName(t.name) === normaliseName(trimmed));
         if (clash) {
             setError('That food type already exists! Pick one from the list below.');
             return;
@@ -152,7 +152,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
         // make sure the custom category name doesn't clash with an existing one (case-insensitive)
         const trimmed = customCategoryName.trim();
-        const clash = categories.some(c => c.name.toLowerCase() === trimmed.toLowerCase());
+        const clash = categories.some(c => normaliseName(c.name) === normaliseName(trimmed));
         if (clash) {
             setError('That category already exists! Pick one from the list below.');
             return;

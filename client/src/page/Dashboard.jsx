@@ -7,6 +7,7 @@ import { AddItemForm } from '../components/AddItemForm';
 import ItemList from '../components/ItemList';
 import NotificationInbox from '../components/NotificationInbox';
 import BrandTitle from '../components/BrandTitle';
+import { foldText, normaliseName} from '../utils/text';
 
 const EXPIRY_STATUSES = new Set([
     'expired',
@@ -49,6 +50,7 @@ export default function Dashboard() {
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [activeInventoryView, setActiveInventoryView] = useState(null);
+    const [searchText, setSearchText] = useState('');
     const [message, setMessage] = useState('');
     const notificationSnoozeKey = useMemo(() => getNotificationSnoozeKey(user?.id), [user?.id]);
     const [dismissedNotificationKey, setDismissedNotificationKey] = useState(() => {
@@ -74,6 +76,16 @@ export default function Dashboard() {
         if (!activeInventoryView || activeInventoryView === 'all') return itemList;
         return itemList.filter(item => activeSection?.storageValues.includes(item.storage));
     }, [activeInventoryView, activeSection, itemList]);
+
+    const searchedItems = useMemo(() => {
+        const query = foldText(searchText);
+        if (!query) return visibleInventoryItems;
+        return visibleInventoryItems
+            .map(item => ({ item, pos: foldText(item.name).indexOf(query) }))
+            .filter(entry => entry.pos !== -1)          // keep only matches
+            .sort((a, b) => a.pos - b.pos)              // earlier match first
+            .map(entry => entry.item);                  // unwrap back to items
+    }, [searchText, visibleInventoryItems]);
 
     const inventoryTitle = activeInventoryView === 'all'
         ? 'Full inventory'
@@ -252,19 +264,58 @@ export default function Dashboard() {
             )}
 
             {activeInventoryView && (
-                <div className="modal-backdrop" role="presentation" onMouseDown={() => setActiveInventoryView(null)}>
+                <div className="modal-backdrop" role="presentation" onMouseDown={() => { setActiveInventoryView(null); setSearchText(''); }}
+>
                     <section className="modal panel inventory-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" onMouseDown={event => event.stopPropagation()}>
-                        <div className="section-heading">
+                         <div className="section-heading">
                             <div>
                                 <p className="eyebrow">Sorted by expiry date</p>
                                 <h2 id="inventory-modal-title">{inventoryTitle}</h2>
                             </div>
-                            <button className="icon-button" aria-label="Close" onClick={() => setActiveInventoryView(null)}>×</button>
+                            <button className="icon-button" aria-label="Close" onClick={() => { setActiveInventoryView(null); setSearchText(''); }}>×</button>
                         </div>
 
-                        {loading ? <p className="panel empty-state">Items loading...</p> : (
+                        <div className="inventory-search">
+                            <div className="inventory-search-pill">
+                                <input
+                                    type="text"
+                                    className="inventory-search-input"
+                                    value={searchText}
+                                    onChange={event => setSearchText(event.target.value)}
+                                    placeholder="Search items by name..."
+                                    autoFocus
+                                />
+                                <span className="inventory-search-icon" aria-hidden="true">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="11" cy="11" r="7" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    </svg>
+                                </span>
+                                <button type="button" className="inventory-search-mic" aria-label="Voice search (coming soon)" disabled>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="9" y="2" width="6" height="12" rx="3" />
+                                        <path d="M5 10a7 7 0 0 0 14 0" />
+                                        <line x1="12" y1="19" x2="12" y2="22" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <button type="button" className="inventory-filter-button" aria-label="Filter (coming soon)" disabled>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="4" y1="8" x2="20" y2="8" />
+                                    <circle cx="9" cy="8" r="2.6" fill="#faf6e6" />
+                                    <line x1="4" y1="16" x2="20" y2="16" />
+                                    <circle cx="15" cy="16" r="2.6" fill="#faf6e6" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {loading ? (
+                            <p className="panel empty-state">Items loading...</p>
+                        ) : searchedItems.length === 0 ? (
+                            <p className="panel empty-state">No items match “{searchText}”.</p>
+                        ) : (
                             <ItemList
-                                itemList={visibleInventoryItems}
+                                itemList={searchedItems}
                                 onEditItem={openEditForm}
                                 onItemDeleted={() => refreshAfterItemChange('Item successfully deleted.')}
                                 onItemUpdated={() => refreshAfterItemChange('Item successfully updated.')}

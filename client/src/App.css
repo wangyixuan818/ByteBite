@@ -935,6 +935,63 @@
   max-height: calc(100dvh - 48px);
   overflow: hidden;
 }
+.inventory-search {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 4px 0 20px;
+}
+.inventory-search-pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 52px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: rgba(120, 145, 100, .30);   /* sage pill */
+}
+.inventory-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 1.05rem;
+    color: #2f4a33;
+}
+.inventory-search-input::placeholder {
+    color: rgba(47, 74, 51, .55);
+}
+.inventory-search-icon,
+.inventory-search-mic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #3a5a3f;
+}
+.inventory-search-mic {
+    border: none;
+    background: transparent;
+    padding: 6px;
+    cursor: pointer;
+}
+.inventory-filter-button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    color: #3a5a3f;
+    cursor: pointer;
+}
+.inventory-search-mic:disabled,
+.inventory-filter-button:disabled {
+    opacity: .55;
+    cursor: default;
+}
 .inventory-modal { width: min(900px, 100%); }
 .add-food-modal { width: min(720px, 100%); }
 .confirm-panel { width: min(360px, calc(100vw - 40px)); display: grid; gap: 14px; }
