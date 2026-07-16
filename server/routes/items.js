@@ -4,19 +4,10 @@ const pool = require('../db');
 const reqAuth = require('../middleware/auth');
 const { formatDate, todayDate, addDays } = require('../helpers/date');
 const { pickDays } = require('../helpers/auto-expiry');
+const { getHouseholdId } = require('../helpers/household');
 
 const router = express.Router();
 router.use(reqAuth);
-
-
-async function getHouseholdId(userId) {
-    const res = await pool.query(
-        `SELECT household_id FROM user_household WHERE user_id = $1 LIMIT 1`,
-        [userId]
-    );
-    return res.rows[0]?.household_id;
-}
-
 
 
 router.get('/', async (req, res) => {
@@ -107,46 +98,78 @@ router.post('/', async (req, res) => {
         let matchedFoodTypeId = food_type_id ?? null;
         let matchedCategoryId = category_id ?? null;
 
+        // Resolve typed brand text 0 --> brand_products row
+        // Runs regardless of whether an expiry date was provided, so the brand is never silently dropped
+        // foreign/invalid brand_product_id is always scrubbed before insert
+        let brandShelfRow = null;
+        if (brand_product_id) {
+            const r = await pool.query(
+                `SELECT id, food_type_id, fridge_days, pantry_days, freezer_days, default_storage
+                FROM brand_products
+                WHERE id = $1 
+                    AND (household_id = $2 OR household_id IS NULL)`,
+                [brand_product_id, householdId]
+            );
+            if (r.rows[0]) {
+                brandShelfRow = r.rows[0];
+                matchedBrandId = r.rows[0].id;
+                matchedFoodTypeId = r.rows[0].food_type_id;
+            } else {
+                matchedBrandId = null; 
+            }
+        } else if (brand && food_type_id) {
+            const r = await pool.query(
+                `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
+                FROM brand_products
+                WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2)
+                    AND (household_id = $3 OR household_id IS NULL)`,
+                [food_type_id, brand, householdId]
+            );
+            if (r.rows[0]) {
+                brandShelfRow = r.rows[0];
+                matchedBrandId = r.rows[0].id;
+            } else {
+                // new brand for this food type --> create as private to this household
+                const created = await pool.query(
+                        `INSERT INTO brand_products (brand, food_type_id, household_id)
+                        VALUES ($1, $2, $3)
+                        RETURNING id`,
+                        [brand.trim(), food_type_id, householdId]
+                    );
+                    matchedBrandId = created.rows[0].id;
+                }
+            }
+
         // inserting the automatic expiry logic here 
         // runs only if no expiry date added
         if (!resolvedExpiryDate) {
-            let shelfLifeRow = null; // stores entire row retrieved
+            // reuse the brand row found during brand resolution (id or text), if any
+            let shelfLifeRow = brandShelfRow; // stores entire row retrieved
 
-            // path 1: explicit IDs given
-            if (brand_product_id) {
+            // path 1: explicit IDs given --> removed in M3 as it is moved outside
+            /* if (brand_product_id) {
                 // go straight to lowest lvl query
                 const r = await pool.query(
                     `SELECT fridge_days, pantry_days, freezer_days, default_storage, food_type_id
-                    FROM brand_products WHERE id = $1`,
-                    [brand_product_id]
+                    FROM brand_products
+                    WHERE id = $1 AND (household_id = $2 OR household_id IS NULL)`,
+                    [brand_product_id, householdId]
                 );
                 if (r.rows[0]) {
                     shelfLifeRow = r.rows[0];
                     matchedBrandId = brand_product_id;
                     matchedFoodTypeId = r.rows[0].food_type_id;
-                    matchedCategoryId = r.rows[0].category_id; 
                 } else {
                     matchedBrandId = null;
                 }
-            }
+            } */ 
 
             // path 2: User picked a product, maybe with a brand text
             if (!shelfLifeRow && food_type_id) {
                 // lowest lvl: check if there is a brand variant matching the typed brand
-                if (brand) {
-                    const r = await pool.query(
-                        `SELECT id, fridge_days, pantry_days, freezer_days, default_storage
-                        FROM brand_products
-                        WHERE food_type_id = $1 AND LOWER(brand) = LOWER($2)`,
-                        [food_type_id, brand]
-                    );
-                    if (r.rows[0]) {
-                        shelfLifeRow = r.rows[0];
-                        matchedBrandId = r.rows[0].id;
-                        matchedFoodTypeId = food_type_id;
-                        matchedCategoryId = r.rows[0].category_id;
-                    }
-                }
+                /* if (brandShelfRow) {
+                    shelfLifeRow = brandShelfRow;
+                } */ // removed in M3 as it is moved outside
 
                 // otherwise we just use the product itself
                 if (!shelfLifeRow) {
@@ -200,8 +223,10 @@ router.post('/', async (req, res) => {
                     FROM brand_products bp
                     JOIN food_types ft ON ft.id = bp.food_type_id
                     WHERE $1 ILIKE '%' || bp.brand || '%' AND $1 ILIKE '%' || ft.name || '%'
+                        AND (bp.household_id = $2 OR bp.household_id IS NULL)
+                        AND (ft.household_id = $2 OR ft.household_id IS NULL)
                     LIMIT 1`,
-                    [name]
+                    [name, householdId]
                 );
 
                 if (brandRes.rows[0]) {
@@ -209,7 +234,6 @@ router.post('/', async (req, res) => {
                     shelfLifeRow = row;
                     matchedBrandId = row.id;
                     matchedFoodTypeId = row.food_type_id;
-                    matchedCategoryId = row.category_id;
                 }
 
                 // second tier: fall back to food_type match (product level)
@@ -218,9 +242,10 @@ router.post('/', async (req, res) => {
                         `SELECT id, category_id, fridge_days, pantry_days, freezer_days, default_storage
                         FROM food_types
                         WHERE $1 ILIKE '%' || name || '%'
+                            AND (household_id = $2 OR household_id IS NULL)
                         ORDER BY LENGTH(name) DESC
                         LIMIT 1`,
-                        [name]
+                        [name, householdId]
                     );
 
                     if (ftRes.rows[0]) {
@@ -233,8 +258,10 @@ router.post('/', async (req, res) => {
                         if (pickDays(row, finalStorage ?? row.default_storage) === null && row.category_id) {
                             const catRes = await pool.query(
                                 `SELECT fridge_days, pantry_days, freezer_days, default_storage
-                                FROM categories WHERE id = $1`,
-                                [row.category_id]
+                                FROM categories WHERE id = $1
+                                    AND (household_id = $2 OR household_id IS NULL)
+                                `,
+                                [row.category_id, householdId]
                             );
                             if (catRes.rows[0]) {
                                 shelfLifeRow = catRes.rows[0];

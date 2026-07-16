@@ -36,27 +36,31 @@ create table user_household (
 -- 4. Categories table
 create table categories (
   id              bigint generated always as identity primary key,
-  name            text not null unique,
+  name            text not null,
   default_storage text not null,   -- default storage location for this category (fridge/pantry/freezer)  
   pantry_days     integer,
   fridge_days     integer,
   freezer_days    integer,
+  household_id    bigint references households(id) on delete cascade,  
   created_at      timestamptz not null default now()
 );
-
+create unique index categories_name_public_uidx    on categories (name) where household_id is null;
+create unique index categories_name_household_uidx on categories (name, household_id) where household_id is not null;
 
 -- 5. food_types: reference data (drives auto-expiry + categories)
 -- Seeded separately with categories and brands (see docs/foodTypes.sql).
 create table food_types (
   id                      bigint generated always as identity primary key,
-  name                    text not null unique,
+  name                    text not null,
   category_id             bigint references categories(id) on delete set null,
   default_storage         text,   
   pantry_days             integer,    
   fridge_days             integer,
-  freezer_days            integer
+  freezer_days            integer,
+  household_id            bigint references households(id) on delete cascade
 );
-
+create unique index food_types_name_public_uidx    on food_types (name) where household_id is null;
+create unique index food_types_name_household_uidx on food_types (name, household_id) where household_id is not null;
 
 -- 6. brands
 create table brand_products (
@@ -68,8 +72,10 @@ create table brand_products (
   fridge_days     integer,
   freezer_days    integer,
   created_at      timestamptz not null default now(),
-  unique (brand, food_type_id)       -- one row per (brand, product) pair 
+  household_id    bigint references households(id) on delete cascade
 );
+create unique index brand_products_brand_ft_public_uidx    on brand_products (brand, food_type_id) where household_id is null;
+create unique index brand_products_brand_ft_household_uidx on brand_products (brand, food_type_id, household_id) where household_id is not null;
 
 
 -- 7. items is where actual food in a household's fridge is stored

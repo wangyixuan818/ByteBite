@@ -1,23 +1,26 @@
 const express = require('express');
 const pool = require('../db');
 const requireAuth = require('../middleware/auth');
+const { getHouseholdId } = require('../helpers/household');
 
 const router = express.Router();
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
     try {
-        const values = [];
+        const householdId = await getHouseholdId(req.user.userId);
+        const values = [householdId];
         let whereClause = '';
 
         if (req.query.food_type_id) {
             values.push(Number(req.query.food_type_id));
-            whereClause = 'WHERE food_type_id = $1';
+            whereClause = `AND food_type_id = $${values.length}`;
         }
 
         const result = await pool.query(
-            `SELECT id, brand, food_type_id, default_storage, pantry_days, fridge_days, freezer_days
+            `SELECT id, brand, food_type_id, default_storage, pantry_days, fridge_days, freezer_days, household_id
              FROM brand_products
+             WHERE (household_id = $1 OR household_id IS NULL)
              ${whereClause}
              ORDER BY brand`,
             values

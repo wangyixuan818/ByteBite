@@ -10,7 +10,7 @@ const blankDetails = {
     unit: '',
     storage: '',
     expiryDate: '',
-    estimateExpiry: true,
+    // estimateExpiry: true,  
     saveFoodType: false,
 };
 
@@ -40,19 +40,20 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const [foodTypes, setFoodTypes] = useState([]);
     const [brandProducts, setBrandProducts] = useState([]);
     const [selectedBrandProductId, setSelectedBrandProductId] = useState('');
-    // MS3 revisit: free-typed brand input is paused because brand-specific expiry needs curated shelf-life data.
-    // const [brandName, setBrandName] = useState('');
+    const [brandName, setBrandName] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedFoodType, setSelectedFoodType] = useState(null);
     const [customCategoryName, setCustomCategoryName] = useState('');
+    const [customFoodTypeName, setCustomFoodTypeName] = useState('');
     const [foodTypeIsCustom, setFoodTypeIsCustom] = useState(false);
+    const [categoryIsCustom, setCategoryIsCustom] = useState(false);
     const [details, setDetails] = useState(() => itemToEdit ? {
         name: itemToEdit.name ?? '',
         quantity: itemToEdit.quantity ?? 1,
         unit: itemToEdit.unit ?? '',
         storage: itemToEdit.storage ?? '',
         expiryDate: toDateInput(itemToEdit.expiry_date),
-        estimateExpiry: false,
+        // estimateExpiry: false,
         saveFoodType: false,
     } : blankDetails);
     const [submitting, setSubmitting] = useState(false);
@@ -81,6 +82,8 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
                 if (itemToEdit?.brand_product_id) {
                     setSelectedBrandProductId(String(itemToEdit.brand_product_id));
+                    const existingBrand = brandRes.data.find(b => Number(b.id) === Number(itemToEdit.brand_product_id));
+                    if (existingBrand) setBrandName(existingBrand.brand);
                 }
             } catch {
                 setError('Failed to load the food library.');
@@ -110,16 +113,11 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
     const selectCategory = (category) => {
         setSelectedCategory(category);
+        setCategoryIsCustom(false);
+        setCustomFoodTypeName('');      
         setSelectedFoodType(null);
         setSelectedBrandProductId('');
         setStep('food-type');
-        setError('');
-    };
-
-    const openCustomCategory = () => {
-        setSelectedCategory(null);
-        setCustomCategoryName('');
-        setStep('custom-category');
         setError('');
     };
 
@@ -131,34 +129,42 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         setStep('details');
     };
 
-    const openCustomFoodType = () => {
+    const continueCustomFoodType = (event) => {
+        event.preventDefault();
+        const trimmed = customFoodTypeName.trim();
+        const clash = filteredTypes.some(t => t.name.toLowerCase() === trimmed.toLowerCase());
+        if (clash) {
+            setError('That food type already exists! Pick one from the list below.');
+            return;
+        }
+        setSelectedFoodType(null);
+        setFoodTypeIsCustom(true);
+        setDetails({ ...blankDetails, name: trimmed });   // pre-fill the item Name with the food type
+        setSelectedBrandProductId('');
+        setStep('details');
+        setError('');
+    };
+
+    const continueCustomCategory = (event) => {
+        event.preventDefault();
+        
+        // defer the createCategory call to submit time, so we never create a category that the user abandons halfway through
+
+        // make sure the custom category name doesn't clash with an existing one (case-insensitive)
+        const trimmed = customCategoryName.trim();
+        const clash = categories.some(c => c.name.toLowerCase() === trimmed.toLowerCase());
+        if (clash) {
+            setError('That category already exists! Pick one from the list below.');
+            return;
+        }
+
+        setSelectedCategory(null);
+        setCategoryIsCustom(true);
         setSelectedFoodType(null);
         setFoodTypeIsCustom(true);
         setDetails(blankDetails);
-        setSelectedBrandProductId('');
         setStep('details');
-    };
-
-    const continueCustomCategory = async (event) => {
-        event.preventDefault();
-        setSubmitting(true);
         setError('');
-        try {
-            const response = await createCategory({ name: customCategoryName.trim() });
-            setSelectedCategory(response.data.category);
-            setSelectedFoodType(null);
-            setFoodTypeIsCustom(true);
-            setDetails(blankDetails);
-            setStep('details');
-        } catch (err) {
-            if (err.response?.status === 401) {
-                setError('Please log in again before creating a category.');
-            } else {
-                setError(err.response?.data?.error?.message || 'Could not save this category.');
-            }
-        } finally {
-            setSubmitting(false);
-        }
     };
 
     const updateDetail = (field, value) => setDetails(current => ({ ...current, [field]: value }));
@@ -166,10 +172,17 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const buildPayload = async () => {
         let foodTypeId = selectedFoodType?.id ?? itemToEdit?.food_type_id;
 
+        // Create the custom category now; buildPayload only runs when the item is actually saved
+        let categoryId = selectedCategory?.id;
+        if (!isEditing && categoryIsCustom) {
+            const catResponse = await createCategory({ name: customCategoryName.trim() });
+            categoryId = catResponse.data.category.id;
+        }
+
         if (!isEditing && foodTypeIsCustom && details.saveFoodType) {
             const typeResponse = await createFoodType({
                 name: details.name.trim(),
-                category_id: selectedCategory.id,
+                category_id: categoryId,
                 default_storage: details.storage || undefined,
             });
             foodTypeId = typeResponse.data.food_type.id;
@@ -181,11 +194,12 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             unit: details.unit.trim() || undefined,
             storage: details.storage || undefined,
             food_type_id: foodTypeId || undefined,
+            brand: brandName.trim() || undefined,
             brand_product_id: selectedBrandProductId ? Number(selectedBrandProductId) : undefined,
         };
 
-        if (!isEditing && selectedCategory?.id) payload.category_id = selectedCategory.id;
-        if (!details.estimateExpiry && details.expiryDate) payload.expiry_date = details.expiryDate;
+        if (!isEditing && categoryId) payload.category_id = categoryId;
+        if (details.expiryDate) payload.expiry_date = details.expiryDate;
 
         return payload;
     };
@@ -204,7 +218,11 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 onItemAdded?.();
             }
         } catch (err) {
-            setError(err.response?.data?.error?.message || 'Something went wrong. Please try again.');
+            if (err.response?.status === 401) {
+                setError('Please log in again before creating a category.');
+            } else {
+                setError(err.response?.data?.error?.message || 'Something went wrong. Please try again.');
+            } 
         } finally {
             setSubmitting(false);
         }
@@ -227,21 +245,18 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                     ))}
                 </div>
                 <div className="flow-divider"><span>or</span></div>
-                <button type="button" className="button secondary" onClick={openCustomCategory}>+ Customize category</button>
+                <form className="form-stack" onSubmit={continueCustomCategory}>
+                    <p className="field-title">Customize category</p>
+                    <label>
+                        Category name
+                        <input value={customCategoryName} onChange={event => setCustomCategoryName(event.target.value)} placeholder="e.g. Fermented food" required />
+                    </label>
+                    <p className="helper-text">For now, custom categories use fridge as their default storage. We can make this editable later.</p>
+                    <button className="button" disabled={submitting} type="submit">
+                        {submitting ? 'Saving...' : 'Continue'}
+                    </button>
+                </form>
             </section>}
-
-            {step === 'custom-category' && <form className="form-stack" onSubmit={continueCustomCategory}>
-                <button className="text-button align-left" type="button" onClick={() => setStep('category')}>← Categories</button>
-                <p className="field-title">1. Customize category</p>
-                <label>
-                    Category name
-                    <input value={customCategoryName} onChange={event => setCustomCategoryName(event.target.value)} placeholder="e.g. Fermented food" required />
-                </label>
-                <p className="helper-text">For now, custom categories use fridge as their default storage. We can make this editable later.</p>
-                <button className="button" disabled={submitting} type="submit">
-                    {submitting ? 'Saving...' : 'Save category and continue'}
-                </button>
-            </form>}
 
             {step === 'food-type' && <section>
                 <button className="text-button align-left" type="button" onClick={() => setStep('category')}>← Categories</button>
@@ -258,7 +273,14 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 </div>
                 {!filteredTypes.length && <p className="helper-text">No existing food types in this category.</p>}
                 <div className="flow-divider"><span>or</span></div>
-                <button type="button" className="button secondary" onClick={openCustomFoodType}>+ Customize food type</button>
+                <form className="form-stack" onSubmit={continueCustomFoodType}>
+                    <p className="field-title">Customize food type</p>
+                    <label>
+                        Food type name
+                        <input value={customFoodTypeName} onChange={event => setCustomFoodTypeName(event.target.value)} placeholder="e.g. Bak Kwa" required />
+                    </label>
+                    <button className="button" type="submit">Continue</button>
+                </form>
             </section>}
 
             {step === 'details' && <form className="form-stack" onSubmit={handleSubmit}>
@@ -282,25 +304,21 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 </label>
 
                 <label>
-                    Brand <small>(optional)</small>
-                    <select value={selectedBrandProductId}
-                            onChange={event => setSelectedBrandProductId(event.target.value)}>
-                        <option value="">No brand / not sure</option>
-                        {filteredBrands.map(brand => (
-                            <option key={brand.id}
-                                    value={brand.id}>{brand.brand}
-                            </option>
-                        ))}
-                    </select>
-                    <span className="helper-text">Optional. Selecting an existing brand can improve expiry estimation when the brand has curated shelf-life data.</span>
-                    {/* MS3 revisit: free-typed brand input is paused because unsaved brands do not have reliable expiry rules yet.
+                    <span>Brand <small>(optional)</small></span>
                     <input
+                        type="text"
                         value={brandName}
                         onChange={event => setBrandName(event.target.value)}
                         placeholder="e.g. Meiji, FairPrice, Marigold"
                         list="brand-options"
+                        autoComplete="off"
                     />
-                    */}
+                    <datalist id="brand-options">
+                        {filteredBrands.map(brand => (
+                            <option key={brand.id} value={brand.brand} />
+                        ))}
+                    </datalist>
+                    <span className="helper-text">Type any brand. Picking a known brand can improve expiry estimation.</span>
                 </label>
 
                 <div className="form-row">
@@ -325,29 +343,24 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                         <option value="pantry">Pantry</option>
                     </select>
                 </label>
-
+                
                 {!isEditing && (
-                    <label className={`estimate-expiry-card ${details.estimateExpiry ? 'active' : ''}`}>
-                        <input
-                            type="checkbox"
-                            checked={details.estimateExpiry}
-                            onChange={event => updateDetail('estimateExpiry', event.target.checked)}
-                        />
+                    <div className="estimate-expiry-card active" aria-live="polite">
                         <span className="estimate-expiry-illustration" aria-hidden="true">
                             <span className="estimate-spark">!</span>
                         </span>
                         <span className="estimate-expiry-copy">
-                            <strong>Smart expiry estimate</strong>
-                            <small>Let ByteBite pick an expiry date from food type, storage, and brand shelf-life data.</small>
+                            <strong>Smart expiry available</strong>
+                            <small>Leave the expiry field below blank and ByteBite will estimate a date from food type, storage, and brand shelf-life.</small>
                         </span>
-                        <span className="estimate-expiry-status">{details.estimateExpiry ? 'On' : 'Off'}</span>
-                    </label>
+                    </div>
                 )}
 
-                {(isEditing || !details.estimateExpiry) && <label>
-                    Expiry date
+                <label>
+                    <span>Expiry date <small>(optional)</small></span>
                     <input type="date" value={details.expiryDate} onChange={event => updateDetail('expiryDate', event.target.value)} />
-                </label>}
+                    <span className="helper-text">Leave blank and ByteBite will estimate one for you.</span>
+                </label>
 
                 {!isEditing && foodTypeIsCustom && <label className="inline-choice">
                     <input type="checkbox" checked={details.saveFoodType} onChange={event => updateDetail('saveFoodType', event.target.checked)} />

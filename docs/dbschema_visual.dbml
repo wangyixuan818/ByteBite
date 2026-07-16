@@ -10,17 +10,20 @@ Table households {
 
 Table categories {
   id bigint [primary key]
-  name text [not null, unique]
+  name text [not null]
   default_storage text [not null]
   pantry_days integer
   fridge_days integer
   freezer_days integer
+  household_id bigint [note: 'null = public/verified; set = private to household']
   created_at timestamptz [not null]
+
+  Note: 'unique(name) where household_id is null; unique(name, household_id) where household_id is not null'
 }
 
 Table food_types {
   id bigint [primary key]
-  name text [not null, unique]
+  name text [not null]
   category_id bigint
   default_storage text
   pantry_days integer
@@ -36,9 +39,10 @@ Table brand_products {
   pantry_days integer
   fridge_days integer
   freezer_days integer
+  household_id bigint [note: 'null = public/verified; set = private to household']
   created_at timestamptz [not null]
   
-  Note: 'unique (brand, food_type_id) -- one row per (brand, product) pair'
+  Note: 'unique(brand, food_type_id) where household_id is null; unique(brand, food_type_id, household_id) where household_id is not null'
 }
 
 Table users {
@@ -135,3 +139,8 @@ Ref: notifications.item_id > items.id // many-to-one (nullable, cascades on dele
 // Relationships for recipe matching
 Ref: recipe_food_types.recipe_id > recipes.id // many-to-one
 Ref: recipe_food_types.food_type_id > food_types.id // many-to-one
+
+// Relationship for householdid and 3 tiers
+Ref: categories.household_id > households.id
+Ref: food_types.household_id > households.id
+Ref: brand_products.household_id > households.id
