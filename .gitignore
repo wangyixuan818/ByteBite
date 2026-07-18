@@ -145,3 +145,4 @@ vite.config.ts.timestamp-*
 # Agent skills
 .agents/
 skills-lock.json
+.playwright-cli/

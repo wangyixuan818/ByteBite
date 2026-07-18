@@ -1,4 +1,13 @@
-export default function NotificationInbox({ expiringItems, onViewSuggestions }) {
+import { Check, Utensils } from 'lucide-react';
+
+export default function NotificationInbox({
+    expiringItems,
+    onViewSuggestions,
+    onConsumeAll,
+    onConsumeItem,
+    onUseItem,
+    onViewItem,
+}) {
     const expiryLabel = (item) => {
         if (item.days_until_expiry < 0) return 'Expired';
         if (item.days_until_expiry === 0) return 'Expires today';
@@ -19,7 +28,15 @@ export default function NotificationInbox({ expiringItems, onViewSuggestions }) 
             <section className="alert-section expiry-section" aria-labelledby="expiry-alert-title">
                 <div className="alert-section-heading">
                     <h3 id="expiry-alert-title">Needs attention</h3>
-                    <span>Sorted soonest</span>
+                    <div className="button-row">
+                        {/* <span className="alert-sort-badge">Sorted soonest</span> */}
+                        {expiringItems.length > 0 && (
+                            <button className="small-action-button consume-alerts-button" type="button" onClick={onConsumeAll}>
+                                <Check size={14} />
+                                <span>Consume all</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {expiringItems.length === 0 ? (
@@ -28,11 +45,31 @@ export default function NotificationInbox({ expiringItems, onViewSuggestions }) 
                     <ul className="expiry-alert-list">
                         {expiringItems.map(item => (
                             <li key={item.id} className={item.days_until_expiry <= 0 ? 'urgent' : ''}>
-                                <div>
+                                <button className="expiry-alert-main" type="button" onClick={() => onViewItem(item)}>
                                     <strong>{item.name}</strong>
                                     <small>{item.storage || 'Storage not set'}</small>
-                                </div>
+                                </button>
                                 <span>{expiryLabel(item)}</span>
+                                <div className="expiry-alert-actions">
+                                    <button
+                                        className="mini-icon-button"
+                                        type="button"
+                                        onClick={() => onConsumeItem(item)}
+                                        aria-label={`Consume all ${item.name}`}
+                                        title="Consume all"
+                                    >
+                                        <Check size={15} />
+                                    </button>
+                                    <button
+                                        className="mini-icon-button"
+                                        type="button"
+                                        onClick={() => onUseItem(item)}
+                                        aria-label={`Use part of ${item.name}`}
+                                        title="Use"
+                                    >
+                                        <Utensils size={15} />
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>
