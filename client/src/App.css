@@ -1748,3 +1748,30 @@
     cursor: pointer; font-size: 1rem; line-height: 1;
 }
 .ingredient-bubble button:hover { background: rgba(255, 255, 255, .4); }
+.tooltip-wrap { position: relative; display: block; }
+.tooltip-bubble {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 260px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #2f4a33;
+    color: #fdfbf0;
+    font-size: .82rem;
+    line-height: 1.35;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+.tooltip-wrap:hover .tooltip-bubble,
+.tooltip-wrap:focus-within .tooltip-bubble {
+    opacity: 1;
+    visibility: visible;
+}
+.tooltip-wrap > .usage-suggestion-button { width: 100%; }

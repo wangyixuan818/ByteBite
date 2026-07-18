@@ -217,7 +217,7 @@ export default function Dashboard() {
             <header className="dashboard-header">
                 <div><p className="eyebrow">Dashboard</p><h1>Your fridge</h1></div>
                 <div className="button-row">
-                    <button className="button secondary" onClick={() => navigate('/dashboard/recipes?mode=library')}>Recipe Library</button>
+                    <button className="button secondary" onClick={() => navigate('/dashboard/recipes')}>Recipe Library</button>
                     <button className="button" onClick={openAddForm}>+ Add item</button>
                 </div>
             </header>

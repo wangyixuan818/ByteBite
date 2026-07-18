@@ -29,6 +29,9 @@ Table food_types {
   pantry_days integer
   fridge_days integer
   freezer_days integer
+  household_id bigint [note: 'null = public/verified; set = private to household']
+
+  Note: 'unique(name) where household_id is null; unique(name, household_id) where household_id is not null'
 }
 
 Table brand_products {
