@@ -7,6 +7,7 @@ import { AddItemForm } from '../components/AddItemForm';
 import ItemList from '../components/ItemList';
 import NotificationInbox from '../components/NotificationInbox';
 import BrandTitle from '../components/BrandTitle';
+import { foldText, normaliseName, searchByName } from '../utils/text';
 
 const EXPIRY_STATUSES = new Set([
     'expired',
@@ -21,6 +22,13 @@ const STORAGE_SECTIONS = [
     { id: 'fridge-door', label: 'Fridge door', storageValues: ['fridge door'] },
     { id: 'freezer', label: 'Freezer', storageValues: ['freezer'] },
     { id: 'pantry', label: 'Pantry', storageValues: ['pantry'] },
+];
+
+const EXPIRY_FILTERS = [
+    { id: 'expired', label: 'Expired', statuses: ['expired'] },
+    { id: 'expiring', label: 'Expiring soon', statuses: ['expiring_today', 'expiring_soon', 'expiring_this_week'] },
+    { id: 'fresh', label: 'Fresh', statuses: ['ok'] },
+    { id: 'no_date', label: 'No date', statuses: ['no_date'] },
 ];
 
 function todayKey() {
@@ -49,6 +57,10 @@ export default function Dashboard() {
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [activeInventoryView, setActiveInventoryView] = useState(null);
+    const [searchText, setSearchText] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
+    const [expiryFilter, setExpiryFilter] = useState(() => new Set());
+    const [storageFilter, setStorageFilter] = useState(() => new Set());
     const [message, setMessage] = useState('');
     const notificationSnoozeKey = useMemo(() => getNotificationSnoozeKey(user?.id), [user?.id]);
     const [dismissedNotificationKey, setDismissedNotificationKey] = useState(() => {
@@ -74,6 +86,42 @@ export default function Dashboard() {
         if (!activeInventoryView || activeInventoryView === 'all') return itemList;
         return itemList.filter(item => activeSection?.storageValues.includes(item.storage));
     }, [activeInventoryView, activeSection, itemList]);
+
+    const filteredInventoryItems = useMemo(() => {
+        // expand the selected expiry buckets into the raw statuses they cover
+        const allowedStatuses = new Set(
+            EXPIRY_FILTERS.filter(f => expiryFilter.has(f.id)).flatMap(f => f.statuses)
+        );
+        return visibleInventoryItems.filter(item => {
+            const expiryOk = expiryFilter.size === 0 || allowedStatuses.has(item.expiry_status);
+            const storageOk = storageFilter.size === 0 || storageFilter.has(item.storage);
+            return expiryOk && storageOk;
+        });
+    }, [visibleInventoryItems, expiryFilter, storageFilter]);
+
+    const searchedItems = useMemo(
+        () => searchByName(filteredInventoryItems, searchText),
+        [searchText, filteredInventoryItems]
+    );
+
+    const activeFilterCount = expiryFilter.size + storageFilter.size;
+
+    const toggleInSet = (setter, value) => {
+        setter(current => {
+            const next = new Set(current);
+            if (next.has(value)) next.delete(value);
+            else next.add(value);
+            return next;
+        });
+    };
+
+    const closeInventory = () => {
+        setActiveInventoryView(null);
+        setSearchText('');
+        setShowFilters(false);
+        setExpiryFilter(new Set());
+        setStorageFilter(new Set());
+    };
 
     const inventoryTitle = activeInventoryView === 'all'
         ? 'Full inventory'
@@ -169,7 +217,7 @@ export default function Dashboard() {
             <header className="dashboard-header">
                 <div><p className="eyebrow">Dashboard</p><h1>Your fridge</h1></div>
                 <div className="button-row">
-                    <button className="button secondary" onClick={() => navigate('/dashboard/recipes?mode=library')}>Recipe Library</button>
+                    <button className="button secondary" onClick={() => navigate('/dashboard/recipes')}>Recipe Library</button>
                     <button className="button" onClick={openAddForm}>+ Add item</button>
                 </div>
             </header>
@@ -184,11 +232,27 @@ export default function Dashboard() {
                             <p className="eyebrow">Storage visualizer</p>
                             <h2 id="fridge-visual-title">Open a section</h2>
                         </div>
-                        <span>{itemList.length} item(s)</span>
+                        <div className="visualizer-meta">
+                            <span>{itemList.length} item(s)</span>
+                                <button type="button" className="visualizer-filter-button" aria-label="Filter inventory" onClick={() => { setActiveInventoryView('all'); setShowFilters(true); }}>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="4" y1="8" x2="20" y2="8" />
+                                    <circle cx="9" cy="8" r="2.6" fill="#faf6e6" />
+                                    <line x1="4" y1="16" x2="20" y2="16" />
+                                    <circle cx="15" cy="16" r="2.6" fill="#faf6e6" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="fridge-visual">
                         <button type="button" className="fridge-section full-inventory" onClick={() => setActiveInventoryView('all')}>
+                            <span className="full-inventory-search" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                            </span>
                             <span>View full inventory</span>
                             <small>{itemList.length} total</small>
                         </button>
@@ -209,7 +273,15 @@ export default function Dashboard() {
 
                 <NotificationInbox
                     expiringItems={expiringItems}
-                    onViewSuggestions={() => navigate('/dashboard/recipes?mode=expiry-suggestion')}
+                    onViewSuggestions={() => {
+                        const ids = [...new Set(
+                            itemList
+                                .filter(i => ['expiring_today', 'expiring_soon', 'expiring_this_week'].includes(i.expiry_status))
+                                .map(i => Number(i.food_type_id))
+                                .filter(Boolean)
+                        )];
+                        navigate(`/dashboard/recipes?ingredients=${ids.join(',')}`);
+                    }}
                 />
             </section>
 
@@ -252,19 +324,110 @@ export default function Dashboard() {
             )}
 
             {activeInventoryView && (
-                <div className="modal-backdrop" role="presentation" onMouseDown={() => setActiveInventoryView(null)}>
+                <div className="modal-backdrop" role="presentation" onMouseDown={ closeInventory }>
                     <section className="modal panel inventory-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" onMouseDown={event => event.stopPropagation()}>
-                        <div className="section-heading">
+                         <div className="section-heading">
                             <div>
                                 <p className="eyebrow">Sorted by expiry date</p>
                                 <h2 id="inventory-modal-title">{inventoryTitle}</h2>
                             </div>
-                            <button className="icon-button" aria-label="Close" onClick={() => setActiveInventoryView(null)}>×</button>
+                            <button className="icon-button" aria-label="Close" onClick={ closeInventory }>×</button>
                         </div>
 
-                        {loading ? <p className="panel empty-state">Items loading...</p> : (
+                        <div className="inventory-search">
+                            <div className="inventory-search-pill">
+                                <input
+                                    type="text"
+                                    className="inventory-search-input"
+                                    value={searchText}
+                                    onChange={event => setSearchText(event.target.value)}
+                                    placeholder="Search items by name..."
+                                    autoFocus
+                                />
+                                <span className="inventory-search-icon" aria-hidden="true">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="11" cy="11" r="7" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    </svg>
+                                </span>
+                                <button type="button" className="inventory-search-mic" aria-label="Voice search (coming soon)" disabled>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="9" y="2" width="6" height="12" rx="3" />
+                                        <path d="M5 10a7 7 0 0 0 14 0" />
+                                        <line x1="12" y1="19" x2="12" y2="22" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                className={`inventory-filter-button${showFilters ? ' is-active' : ''}`}
+                                aria-label="Filter items"
+                                aria-pressed={showFilters}
+                                onClick={() => setShowFilters(v => !v)}
+                            >
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="4" y1="8" x2="20" y2="8" />
+                                    <circle cx="9" cy="8" r="2.6" fill="#faf6e6" />
+                                    <line x1="4" y1="16" x2="20" y2="16" />
+                                    <circle cx="15" cy="16" r="2.6" fill="#faf6e6" />
+                                </svg>
+                                {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+                            </button>
+                        </div>
+
+                        {showFilters && (
+                            <div className="inventory-filters">
+                                <div className="filter-group">
+                                    <span className="filter-group-label">Expiry</span>
+                                    <div className="filter-chips">
+                                        {EXPIRY_FILTERS.map(f => (
+                                            <button
+                                                key={f.id}
+                                                type="button"
+                                                className={`filter-chip${expiryFilter.has(f.id) ? ' is-selected' : ''}`}
+                                                onClick={() => toggleInSet(setExpiryFilter, f.id)}
+                                            >
+                                                {f.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="filter-group">
+                                    <span className="filter-group-label">Storage</span>
+                                    <div className="filter-chips">
+                                        {STORAGE_SECTIONS.map(section => {
+                                            const value = section.storageValues[0];
+                                            return (
+                                                <button
+                                                    key={section.id}
+                                                    type="button"
+                                                    className={`filter-chip${storageFilter.has(value) ? ' is-selected' : ''}`}
+                                                    onClick={() => toggleInSet(setStorageFilter, value)}
+                                                >
+                                                    {section.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                {activeFilterCount > 0 && (
+                                    <button type="button" className="filter-clear" onClick={() => { setExpiryFilter(new Set()); setStorageFilter(new Set()); }}>
+                                        Clear filters
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {loading ? (
+
+                            <p className="panel empty-state">Items loading...</p>
+                        ) : searchedItems.length === 0 ? (
+                            <p className="panel empty-state">
+                                {searchText ? `No items match “${searchText}”.` : 'No items match these filters.'}
+                            </p>
+                        ) : (
                             <ItemList
-                                itemList={visibleInventoryItems}
+                                itemList={searchedItems}
                                 onEditItem={openEditForm}
                                 onItemDeleted={() => refreshAfterItemChange('Item successfully deleted.')}
                                 onItemUpdated={() => refreshAfterItemChange('Item successfully updated.')}

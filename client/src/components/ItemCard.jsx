@@ -36,7 +36,7 @@ export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUp
             </div>
 
             <div className="button-row item-actions">
-                <button className="button secondary" onClick={() => navigate(`/dashboard/recipes?mode=use-item&item=${item.id}`)}>How can I use this?</button>
+                <button className="button secondary" onClick={() => navigate(`/dashboard/recipes?ingredients=${item.food_type_id ?? ''}`)}>How can I use this?</button>
                 <button className="button secondary" onClick={() => onEditItem(item)}>Update</button>
                 <button className="button secondary" onClick={() => setShowConfirmation(true)}>Consumed</button>
                 <button className="button danger" onClick={handleDelete}>Delete</button>

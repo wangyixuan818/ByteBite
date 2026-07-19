@@ -24,7 +24,7 @@ export default function RecipeDetailPage() {
     const [error, setError] = useState('');
     const [recipe, setRecipe] = useState(null);
     const location = useLocation();
-    const backTo = location.state?.from || '/dashboard/recipes?mode=library'
+    const backTo = location.state?.from || '/dashboard/recipes'
     const { id } = useParams();
 
     useEffect(() => {
