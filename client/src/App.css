@@ -1013,24 +1013,29 @@
 .section-heading h2, .section-heading h1 { margin-bottom: 0; }
 .item-list { position: relative; display: grid; gap: 12px; }
 .item-list .modal-backdrop {position: absolute;border-radius: 8px;}
-.item-card { position: relative; display: flex; justify-content: space-between; gap: 18px; align-items: center; }
+.item-card { position: relative; display: flex; justify-content: space-between; gap: 18px; align-items: center; flex-wrap: wrap; }
 .item-card.menu-open { z-index: 8; }
 .item-card.urgent { border-left: 7px solid #df6f55; background: var(--red-soft); }
-.item-main { display: flex; justify-content: space-between; gap: 30px; flex: 1; align-items: center; }
+.item-main { display: flex; justify-content: space-between; gap: 30px; flex: 1 1 330px; align-items: center; min-width: 0; }
 .item-main p { margin-bottom: 0; color: #5b6259; }
 .expiry-copy { display: flex; flex-direction: column; min-width: 130px; }
 .expiry-copy small { color: #687067; }
-.item-actions { justify-content: flex-end; }
+.item-actions { justify-content: flex-end; margin-left: auto; }
 .dashboard-page .item-actions .item-action-button {
   min-height: 42px;
   border: 1px solid #78946f;
   background: rgba(255, 249, 223, .78);
   color: #416f3f;
 }
+.dashboard-page .item-actions .item-action-button.danger {
+  border-color: rgba(166, 63, 63, .45);
+  background: rgba(255, 240, 238, .78);
+  color: #8f3434;
+}
 .item-actions .text-icon-button {
   width: auto;
   min-width: fit-content;
-  padding-inline: 12px;
+  padding-inline: 11px;
   display: inline-flex;
   gap: 7px;
   align-items: center;

@@ -1,4 +1,5 @@
-// Scheduled job: marks active items whose expiry_date has passed as 'expired'
+// Scheduled job: creates expiry notifications.
+// Expired is derived from expiry_date, so this job does not mutate item status.
 // Runs every day at 08:00 Singapore time
 
 let cron = null;
@@ -11,26 +12,10 @@ try {
 const pool = require('../db');
 const { todayDate } = require('../helpers/date');
 
-// The actual work, pulled out as a plain async function so it's directly testable
-// (without having to wait for the cron schedule to fire)
+// Kept as a no-op compatibility export for older callers/tests.
+// Expiry is now derived from expiry_date instead of stored in status.
 async function markExpiredItems() {
-    try {
-        const today = todayDate();
-        const result = await pool.query(
-            `UPDATE items
-             SET status = 'expired', updated_at = now()
-             WHERE status = 'active'
-               AND expiry_date IS NOT NULL
-               AND expiry_date < $1::date
-             RETURNING id`,
-            [today]
-        );
-        console.log(`[expiry-alerts] marked ${result.rowCount} item(s) as expired`);
-        return result.rowCount;
-    } catch (err) {
-        console.error('[expiry-alerts] failed to mark expired items:', err);
-        throw err;
-    }
+    return 0;
 }
 
 // Creates one notification per (user, item) for items expiring today through 3 days
@@ -72,7 +57,6 @@ async function createExpiryNotifications() {
 }
 
 async function runExpiryAlertJobs() {
-    await markExpiredItems();
     await createExpiryNotifications();
 }
 

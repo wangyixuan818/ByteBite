@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useState } from 'react';
 import { deleteItem, updateItem } from '../api/item';
-import { Check, ChefHat, MoreHorizontal, Minus, Pencil, Plus, Trash2, Utensils } from 'lucide-react';
+import { Ban, Check, ChefHat, MoreHorizontal, Minus, Pencil, Plus, Trash2, Utensils } from 'lucide-react';
 
 const urgentStatuses = new Set(['expired', 'expiring_today', 'expiring_soon']);
 
@@ -10,6 +10,7 @@ export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUp
     const navigate = useNavigate();
     const urgent = urgentStatuses.has(item.expiry_status);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const [showDisposeConfirmation, setShowDisposeConfirmation] = useState(false);
     const [showUseForm, setShowUseForm] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [usedQuantity, setUsedQuantity] = useState(1);
@@ -28,6 +29,12 @@ export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUp
         await updateItem(item.id, { status: 'consumed' });
         onItemUpdated();
         setShowConfirmation(false);
+    };
+
+    const handleDisposed = async () => {
+        await updateItem(item.id, { status: 'disposed' });
+        onItemUpdated();
+        setShowDisposeConfirmation(false);
     };
 
     const openUseForm = () => {
@@ -111,6 +118,10 @@ export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUp
                     <Utensils size={17} />
                     <span>Use</span>
                 </button>
+                <button className="button item-action-button text-icon-button danger" onClick={() => setShowDisposeConfirmation(true)}>
+                    <Trash2 size={17} />
+                    <span>Dispose</span>
+                </button>
                 <div className="more-menu-wrap">
                     <button
                         className="icon-button item-action-button"
@@ -141,7 +152,7 @@ export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUp
                                     handleDelete();
                                 }}
                             >
-                                <Trash2 size={16} />
+                                <Ban size={16} />
                                 <span>Delete item</span>
                             </button>
                         </div>
@@ -194,6 +205,19 @@ export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUp
                         <div className="button-row">
                             <button className="button" onClick={handleConsumed}>Confirm</button>
                             <button className="button secondary" onClick={() => setShowConfirmation(false)}>Cancel</button>
+                        </div>
+                    </section>
+                </div>,
+                modalContainer
+            )}
+
+            {showDisposeConfirmation && modalContainer instanceof Element && createPortal(
+                <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowDisposeConfirmation(false)}>
+                    <section className="panel confirm-panel" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
+                        <p>Mark <strong>{item.name}</strong> as disposed?</p>
+                        <div className="button-row">
+                            <button className="button danger" onClick={handleDisposed}>Confirm</button>
+                            <button className="button secondary" onClick={() => setShowDisposeConfirmation(false)}>Cancel</button>
                         </div>
                     </section>
                 </div>,

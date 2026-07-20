@@ -11,16 +11,16 @@ afterAll(async () => { await pool.end(); });
 
 describe('markExpiredItems', () => {
 
-    test('flips active items whose expiry_date is in the past to expired', async () => {
+    test('does not mutate active items whose expiry_date is in the past', async () => {
         const { householdId } = await signupAndGetToken();
         const past = await insertItem({ household_id: householdId, name: 'Old milk',
             expiry_date: addDays(todayDate(), -1), status: 'active' });
 
         const count = await markExpiredItems();
-        expect(count).toBe(1);
+        expect(count).toBe(0);
 
         const row = (await pool.query('SELECT status FROM items WHERE id = $1', [past.id])).rows[0];
-        expect(row.status).toBe('expired');
+        expect(row.status).toBe('active');
     });
 
     test('does NOT touch items expiring today (strictly past only)', async () => {
