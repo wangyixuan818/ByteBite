@@ -17,8 +17,8 @@ const recipesRoutes = require('./routes/recipes');
 const brandProductsRoutes = require('./routes/brandProducts');
 
 // note: Middleware = a function that runs on every incoming request before it reaches the route
-// tells the browser "requests from the React app at :5173 are allowed"
-app.use(cors({ origin: 'http://localhost:5173' }));
+// make cors origin configurable via env var, default to localhost:5173 for dev
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json());                            
 
 app.use('/api/v1/auth', authRoutes);

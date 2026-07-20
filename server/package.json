@@ -4,9 +4,13 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "start": "node server.js", 
     "bite": "node --watch server.js",
     "test": "jest",
     "test:coverage": "jest --coverage"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "keywords": [],
   "author": "",
