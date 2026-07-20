@@ -76,9 +76,14 @@ export default function NotificationInbox({
                 )}
             </section>
 
-            <button className="usage-suggestion-button" type="button" onClick={onViewSuggestions}>
-                Check usage suggestions
-            </button>
+            <div className="tooltip-wrap">
+                <button className="usage-suggestion-button" type="button" onClick={onViewSuggestions}>
+                    Check usage suggestions
+                </button>
+                <span className="tooltip-bubble" role="tooltip">
+                    Uses items expiring soon. Already-expired items are excluded.
+                </span>
+            </div>
         </aside>
     );
 }

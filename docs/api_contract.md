@@ -1,4 +1,4 @@
-# ByteBite API Contract: Milestone 2
+# ByteBite API Contract: Milestone 3
 
 ### Global conventions
 
@@ -56,6 +56,8 @@ When an item is created without a manual `expiry_date`, the backend tries to est
 2. food type
 3. category
 
+Every catalog tier is two-layered. A row with `household_id: null` is a public, verified entry visible to all households; a row with a `household_id` is private to that household. All catalog reads return the public layer plus the caller's own entries, never another household's.
+
 ### GET /categories  (auth required)
 
 List all food categories.
@@ -64,30 +66,32 @@ List all food categories.
 
 ### POST /categories  (auth required)
 
-Create a custom category. Current frontend sends name only; thumbnail is held for a later version.
+Create a custom category, private to the caller's household. If a category with the same name already exists (public, or already in this household), the existing row is returned instead of creating a duplicate. Current frontend sends name only; thumbnail is held for a later version.
 
-- Request: `{ "name": string }`
-- 201: `{ "category": <category> }`
-- Errors: 400 `VALIDATION_ERROR`
+- Request: `{ "name": string, "default_storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone" }`
+- 201: `{ "category": <category> }` — a new private category was created
+- 200: `{ "category": <category> }` — an existing public or household category was reused
+- Errors: 400 `VALIDATION_ERROR`, 409 `CATEGORY_ALREADY_EXISTS`
 
 ### GET /food-types  (auth required)
 
-List all food types/products.
+List food categories visible to the caller: public entries plus the household's own.
 
 - Optional query param: `?category_id=N` may be supported by frontend filtering, but current backend returns all rows.
 - 200: `[ <food_type>, ... ]`
 
 ### POST /food-types  (auth required)
 
-Create a custom food type under a category.
+Create a custom food type under a category, private to the caller's household. If a food type with the same name already exists (public, or already in this household), the existing row is returned instead of creating a duplicate.
 
 - Request: `{ "name": string, "category_id": number, "default_storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone", "pantry_days"?: number | null, "fridge_days"?: number | null, "freezer_days"?: number | null }`
-- 201: `{ "food_type": <food_type> }`
-- Errors: 400 `VALIDATION_ERROR`
+- 201: `{ "food_type": <food_type> }` — a new private food type was created
+- 200: `{ "food_type": <food_type> }` — an existing public or household food type was reused
+- Errors: 400 `VALIDATION_ERROR`, 409 `FOOD_TYPE_ALREADY_EXISTS`
 
 ### GET /brand-products  (auth required)
 
-List all brand variants. This is the backend route the frontend should use for brand suggestions.
+List brand variants visible to the caller: public entries plus the household's own.
 
 - Optional query param: `?food_type_id=N` filters brands for one food type.
 - 200: `[ <brand_product>, ... ]`
@@ -120,6 +124,8 @@ Each item is returned with two server-computed fields to support the frontend's 
 ### POST /items  (auth required)
 
 Add an item. If `expiry_date` is omitted, the server runs a **cascading auto-expiry lookup** across the catalog hierarchy: it tries the brand_products tier first (most specific), then falls back to food_types (product), then to categories (most general). On any match it computes `expiry_date = added_date + shelf_life_days` (picking the right `pantry_days` / `fridge_days` / `freezer_days` based on `storage`) and sets `expiry_is_estimated=true`. On no match, `expiry_date` stays null. If `storage` is omitted, the server fills it in from the matched catalog row's `default_storage`. The matched `brand_product_id` and/or `food_type_id` are persisted on the item.
+
+Brand handling runs before the expiry cascade. If `brand` is supplied as free text together with a `food_type_id` and no `brand_product_id`, the server matches it against brands visible to the household and creates a new private brand when there is no match, so a typed brand is never discarded even when `expiry_date` is also provided. A `brand_product_id` belonging to another household is rejected and stored as null.
 
 - Request: `{ "name": string, "food_type_id"?: number, "brand_product_id"?: number, "category_id"?: number, "brand"?: string, "quantity"?: number, "unit"?: string, "added_date"?: ISO date, "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone" }`
 - 201: `{ "item": <item> }`
@@ -212,7 +218,8 @@ brand_product_id, food_type_id, and category_id are the catalog rows that matche
   "default_storage": "fridge",
   "pantry_days": null,
   "fridge_days": 7,
-  "freezer_days": 180
+  "freezer_days": 180,
+  "household_id": null
 }
 ```
 
@@ -227,7 +234,8 @@ brand_product_id, food_type_id, and category_id are the catalog rows that matche
   "default_storage": "fridge",
   "pantry_days": null,
   "fridge_days": 7,
-  "freezer_days": 90
+  "freezer_days": 90,
+  "household_id": null
 }
 ```
 
@@ -241,10 +249,13 @@ brand_product_id, food_type_id, and category_id are the catalog rows that matche
   "default_storage": "fridge",
   "pantry_days": null,
   "fridge_days": 5,
-  "freezer_days": 90
+  "freezer_days": 90,
+  "household_id": null
 }
 ```
 The per-storage `*_days` fields may be `null` if that storage location isn't applicable for the food (e.g. milk has no `pantry_days`). When all three are null on a row, the cascade falls through to the next tier in the hierarchy.
+
+`household_id` is `null` for public, verified entries and set to the owning household's id for private ones.
 
 
 ## The `<notification>` object

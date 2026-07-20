@@ -97,7 +97,7 @@ export default function ItemCard({ item, modalContainer, onItemDeleted, onItemUp
             <div className="button-row item-actions">
                 <button
                     className="icon-button item-action-button"
-                    onClick={() => navigate(`/dashboard/recipes?mode=use-item&item=${item.id}`)}
+                    onClick={() => navigate(`/dashboard/recipes?ingredients=${item.food_type_id ?? ''}`)}
                     aria-label={`Find recipes for ${item.name}`}
                     title="Find recipes"
                 >

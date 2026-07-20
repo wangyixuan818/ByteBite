@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addItem, createCategory, createFoodType, getBrands, getCategories, getFoodTypes, updateItem } from '../api/item';
+import { normaliseName } from '../utils/text';
 
 const categoryIcons = import.meta.glob('../assets/bytebite-ui-v2/categories/*.png', { eager: true, import: 'default' });
 const foodTypeIcons = import.meta.glob('../assets/bytebite-ui-v2/foodtypes/*.png', { eager: true, import: 'default' });
@@ -11,7 +12,7 @@ const blankDetails = {
     storage: '',
     expiryDate: '',
     // estimateExpiry: true,  
-    saveFoodType: false,
+    saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
 };
 
 const toDateInput = (value) => value ? String(value).split('T')[0] : '';
@@ -54,7 +55,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         storage: itemToEdit.storage ?? '',
         expiryDate: toDateInput(itemToEdit.expiry_date),
         // estimateExpiry: false,
-        saveFoodType: false,
+        saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
     } : blankDetails);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -132,7 +133,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     const continueCustomFoodType = (event) => {
         event.preventDefault();
         const trimmed = customFoodTypeName.trim();
-        const clash = filteredTypes.some(t => t.name.toLowerCase() === trimmed.toLowerCase());
+        const clash = filteredTypes.some(t => normaliseName(t.name) === normaliseName(trimmed));
         if (clash) {
             setError('That food type already exists! Pick one from the list below.');
             return;
@@ -152,7 +153,7 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
         // make sure the custom category name doesn't clash with an existing one (case-insensitive)
         const trimmed = customCategoryName.trim();
-        const clash = categories.some(c => c.name.toLowerCase() === trimmed.toLowerCase());
+        const clash = categories.some(c => normaliseName(c.name) === normaliseName(trimmed));
         if (clash) {
             setError('That category already exists! Pick one from the list below.');
             return;
