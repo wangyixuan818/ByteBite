@@ -5,8 +5,8 @@ ByteBite is a food tracking app designed around minimal effort. Unlike existing 
 - Automatic Expiry Assignment
 - Expiry Alerts & Notifications
 - Recipe recommendations
+- Search & Filter 
 - Simplified Input Methods (Upcoming)
-- Search & Filter (Upcoming)
 
 For more details on our project, click on the following [link](https://docs.google.com/document/d/1hNrYeo5fJdf_0mjRjhBH34OTsWTYUxQnUiKmTPZxvQE/edit?usp=sharing).
 
