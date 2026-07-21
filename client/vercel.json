@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://bytebite-api.jollydesert-4c98bf10.eastasia.azurecontainerapps.io/api/:path*"
+    }
+  ]
+}
