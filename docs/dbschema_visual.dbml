@@ -73,12 +73,17 @@ Table items {
   brand_product_id bigint
   food_type_id bigint
   category_id bigint 
+  initial_quantity numeric
   quantity numeric
   unit text
   added_date date [not null]
   expiry_date date
   expiry_is_estimated boolean [not null]
-  status text [not null, note: "check (status in ('active','consumed','removed','expired'))"]
+  status text [not null, note: "check (status in ('active','consumed','disposed','removed'))"]
+  status_updated_at timestamptz
+  consumed_at date
+  disposed_at date
+  removed_at date
   storage text [note: "check (storage in ('fridge','pantry','freezer', 'fridge door', 'fresh zone'))"]
   created_by bigint
   created_at timestamptz [not null]

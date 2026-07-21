@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import RecipeMatchSummary from './RecipeMatchSummary';
 import RecipeDifficulty from './RecipeDifficulty';
 
@@ -24,6 +24,7 @@ const getRecipeIcon = (name) => recipeIconBySlug[slugify(name)] ?? fallbackIcon;
 
 export default function RecipeCard({ recipe }) {
     const navigate = useNavigate();
+    const location =useLocation();
     const meta = [
         recipe.cuisine_type,
         recipe.prep_time_minutes && `${recipe.prep_time_minutes} min`,
@@ -44,7 +45,12 @@ export default function RecipeCard({ recipe }) {
             <RecipeMatchSummary recipe={recipe} />
             {recipe.calories_kcal && <p className="recipe-calories">{recipe.calories_kcal} kcal</p>}
             {recipe.nutrition && <p className="recipe-nutrition">{recipe.nutrition}</p>}
-            <button className="button secondary" onClick={() => navigate(`/dashboard/recipes/${recipe.id}`)}>View recipe</button>
+            <button className="button secondary"
+                    onClick={() => navigate(`/dashboard/recipes/${recipe.id}`, {
+                        state: {
+                            from: `/dashboard/recipes${location.search}`,
+                        },
+                    })}>View recipe</button>
         </article>
     );
 }

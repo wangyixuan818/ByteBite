@@ -101,10 +101,11 @@ List brand variants visible to the caller: public entries plus the household's o
 
 ### GET /items  (auth required)
 
-List active items in the user's household, sorted by expiry date (soonest first, items without an expiry date last). Items whose `status` is not `active` (consumed, removed, expired) are excluded from this view but kept in the database for analytics.
+List active items in the user's household, sorted by expiry date (soonest first, items without an expiry date last). Items whose `status` is not `active` (`consumed`, `disposed`, `removed`) are excluded from this view but kept in the database for analytics.
 
-Each item is returned with two server-computed fields to support the frontend's "expiring soon" highlighting:
+Each item is returned with server-computed expiry fields to support the frontend's "expiring soon" highlighting:
 - `days_until_expiry`: signed integer number of days from today to the item's `expiry_date`. Negative for items already past expiry, zero for today, `null` when `expiry_date` is `null`.
+- `expired`: boolean derived from `expiry_date < current_date`; it is not stored as lifecycle status.
 - `expiry_status`: a bucket label derived from `days_until_expiry`. One of:
   - `no_date` — `expiry_date` is null
   - `expired` — already past
@@ -138,15 +139,15 @@ Brand handling runs before the expiry cascade. If `brand` is supplied as free te
 
 ### PATCH /items/:id  (auth required)
 
-Update any subset of item fields. This endpoint is also used to mark an item as consumed.
+Update any subset of item fields. This endpoint is also used to mark an item as consumed, disposed, or removed.
 
-- Request: `{ "name"?: string, "food_type_id"?: number, "brand_product_id"?: number, "quantity"?: number, "unit"?: string, "added_date"?: ISO date, "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone", "status"?: "active" | "consumed" | "removed" | "expired" }`
+- Request: `{ "name"?: string, "food_type_id"?: number, "brand_product_id"?: number, "quantity"?: number, "unit"?: string, "added_date"?: ISO date, "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone", "status"?: "active" | "consumed" | "disposed" | "removed" }`
 - 200: `{ "item": <item> }`
 - Errors: 400 `VALIDATION_ERROR`, 404 `NOT_FOUND`
 
 ### DELETE /items/:id  (auth required)
 
-Hard delete (we'll revisit if Usage Analytics gets added).
+Soft delete. The item is marked `status = "removed"` and hidden from normal item reads.
 - 204 No Content
 
 
@@ -195,16 +196,24 @@ Get one recipe with required food type IDs.
   "food_type_id": 12,
   "brand_product_id": 5,
   "category_id": 1,
+  "initial_quantity": 1,
   "quantity": 1,
   "unit": "carton",
   "added_date": "2026-05-20",
   "expiry_date": "2026-05-25",
   "expiry_is_estimated": true,
   "status": "active",
+  "status_updated_at": null,
+  "consumed_at": null,
+  "disposed_at": null,
+  "removed_at": null,
   "storage": "fridge",
   "created_by": 3,
   "created_at": "2026-05-20T08:30:00Z",
-  "updated_at": "2026-05-20T08:30:00Z"
+  "updated_at": "2026-05-20T08:30:00Z",
+  "days_until_expiry": 5,
+  "expired": false,
+  "expiry_status": "ok"
 }
 ```
 

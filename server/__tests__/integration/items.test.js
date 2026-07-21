@@ -6,6 +6,7 @@ const pool = require('../../db');
 const { cleanDatabase } = require('../helpers/db');
 const { signupAndGetToken } = require('../helpers/auth');
 const { insertCategory, insertFoodType, insertBrandProduct } = require('../helpers/catalog');
+const { addDays, todayDate } = require('../../helpers/date');
 
 // clean database before each test
 beforeEach(async () => {
@@ -40,6 +41,17 @@ describe('Item endpoints', () => {
                 expect(res.body.item.name).toBe('Eggs');
                 expect(res.body.item.expiry_date).toBe('2026-06-30');
                 expect(res.body.item.expiry_is_estimated).toBe(false);
+            });
+
+            test('stores the original quantity for analytics', async () => {
+                const res = await request(app)
+                    .post('/api/v1/items')
+                    .set('Authorization', `Bearer ${token}`)
+                    .send({ name: 'Eggs', quantity: 12, unit: 'pcs' });
+
+                expect(res.status).toBe(201);
+                expect(Number(res.body.item.initial_quantity)).toBe(12);
+                expect(Number(res.body.item.quantity)).toBe(12);
             });
 
 
@@ -247,6 +259,20 @@ describe('Item endpoints', () => {
             expect(res.body.length).toBe(2);
         });
 
+        test('returns expired as a derived field without changing lifecycle status', async () => {
+            await request(app).post('/api/v1/items').set('Authorization', `Bearer ${token}`)
+                .send({ name: 'Old milk', expiry_date: addDays(todayDate(), -1) });
+
+            const res = await request(app)
+                .get('/api/v1/items')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body[0].status).toBe('active');
+            expect(res.body[0].expired).toBe(true);
+            expect(res.body[0].expiry_status).toBe('expired');
+        });
+
         // a user shouldnt see another household's items
         test('does not return items from another household', async () => {
             // current user (token) makes an item
@@ -351,6 +377,38 @@ describe('Item endpoints', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.item.status).toBe('consumed');
+            expect(res.body.item.status_updated_at).toBeTruthy();
+            expect(res.body.item.consumed_at).toBeTruthy();
+        });
+
+        test('caps consumed_at to expiry_date when consumed after expiry', async () => {
+            const expiryDate = addDays(todayDate(), -1);
+            const created = await request(app).post('/api/v1/items').set('Authorization', `Bearer ${token}`)
+                .send({ name: 'Old eggs', expiry_date: expiryDate });
+            const id = created.body.item.id;
+
+            const res = await request(app)
+                .patch(`/api/v1/items/${id}`)
+                .set('Authorization', `Bearer ${token}`)
+                .send({ status: 'consumed' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.item.consumed_at).toBe(expiryDate);
+        });
+
+        test('can mark an item as disposed', async () => {
+            const created = await request(app).post('/api/v1/items').set('Authorization', `Bearer ${token}`)
+                .send({ name: 'Spoiled tofu', expiry_date: '2026-02-01' });
+            const id = created.body.item.id;
+
+            const res = await request(app)
+                .patch(`/api/v1/items/${id}`)
+                .set('Authorization', `Bearer ${token}`)
+                .send({ status: 'disposed' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.item.status).toBe('disposed');
+            expect(res.body.item.disposed_at).toBeTruthy();
         });
 
         test('returns 404 when patching an item that does not exist', async () => {
@@ -366,7 +424,7 @@ describe('Item endpoints', () => {
 
     describe('DELETE /items/:id', () => {
 
-        test('deletes an item', async () => {
+        test('soft-removes an item', async () => {
             const created = await request(app).post('/api/v1/items').set('Authorization', `Bearer ${token}`)
                 .send({ name: 'Eggs', expiry_date: '2026-02-01' });
             const id = created.body.item.id;
@@ -381,6 +439,10 @@ describe('Item endpoints', () => {
                 .get(`/api/v1/items/${id}`)
                 .set('Authorization', `Bearer ${token}`);
             expect(check.status).toBe(404);
+
+            const row = (await pool.query('SELECT status, removed_at FROM items WHERE id = $1', [id])).rows[0];
+            expect(row.status).toBe('removed');
+            expect(row.removed_at).toBeTruthy();
         });
 
         test('returns 404 when deleting an item that does not exist', async () => {

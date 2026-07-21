@@ -12,6 +12,13 @@ For more details on our project, click on the following [link](https://docs.goog
 
 ---
 
+## Software Engineering Practices
+ByteBite is developed using a branch-based workflow so that new features and fixes can be worked on separately before being merged back into the main codebase. For example, frontend setup, expiry-date handling, and bug fixes are kept on dedicated feature or bug branches such as `feature/frontend-setup`, `feature/expiry-prior`, and `bug/expiry-prior-bug`. This makes it easier to review changes, test them in isolation, and avoid mixing unrelated work in the same commit. We also maintain supporting engineering documents, including an API contract in `docs/api_contract.md` and database schema files in `docs/`, so frontend and backend development can stay aligned. Backend tests are run through a GitHub Actions workflow on pushes and pull requests to `main`, using separate test database credentials stored as repository secrets. Sensitive local configuration such as database URLs and JWT secrets are kept in `.env` files and excluded from Git. Together, these practices help us keep the project maintainable, traceable, and safer to modify as the app grows.
+
+Evidence to include in the final submitted document: screenshots of feature branches, pull requests or review comments, GitHub issues or sprint boards, and the GitHub Actions test workflow.
+
+---
+
 ## Getting Started
 Follow these steps to set up ByteBite locally on your machine.
 
@@ -47,7 +54,7 @@ Create a new file named `server/.env`. Use `server/.env.example` as a template.
 - DATABASE_URL: The Session Pooler URI string you copied from Supabase in Step 1
 - JWT_SECRET: A custom random string of your choice, at least 32 characters long, used for login security. To generate a professional one, run this command in your terminal and copy the result:  
     ```bash node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")```     
-    ⚠️ Important: Never commit this .env file to Git. It is private to your local machine. `server/.env` is gitignored.
+    Important: Never commit this .env file to Git. It is private to your local machine. `server/.env` is gitignored.
 
 
 ### Step 4: Open a New Terminal and start the Backend Server

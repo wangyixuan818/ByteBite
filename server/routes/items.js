@@ -9,14 +9,9 @@ const { getHouseholdId } = require('../helpers/household');
 const router = express.Router();
 router.use(reqAuth);
 
-
-router.get('/', async (req, res) => {
-    try {
-        const householdId = await getHouseholdId(req.user.userId);
-        // add a tag to denote how many days they are from expiry
-        const result = await pool.query(
-            `SELECT *,
+const itemSelectFields = `*,
                 (expiry_date - CURRENT_DATE)::int AS days_until_expiry,
+                (expiry_date IS NOT NULL AND expiry_date < CURRENT_DATE) AS expired,
                 CASE
                     WHEN expiry_date IS NULL THEN 'no_date'
                     WHEN (expiry_date - CURRENT_DATE)::int < 0 THEN 'expired'
@@ -24,7 +19,15 @@ router.get('/', async (req, res) => {
                     WHEN (expiry_date - CURRENT_DATE)::int <= 3 THEN 'expiring_soon'
                     WHEN (expiry_date - CURRENT_DATE)::int <= 7 THEN 'expiring_this_week'
                     ELSE 'ok'
-                END AS expiry_status
+                END AS expiry_status`;
+
+
+router.get('/', async (req, res) => {
+    try {
+        const householdId = await getHouseholdId(req.user.userId);
+        // add a tag to denote how many days they are from expiry
+        const result = await pool.query(
+            `SELECT ${itemSelectFields}
             FROM items
             WHERE household_id = $1 AND status = 'active'
             ORDER BY
@@ -291,13 +294,17 @@ router.post('/', async (req, res) => {
 
         const insertRes = await pool.query(
             `INSERT INTO items
-            (household_id, name, food_type_id, brand_product_id, category_id, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)  
-            RETURNING *`,
+            (household_id, name, food_type_id, brand_product_id, category_id, initial_quantity, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id`,
             [householdId, name, matchedFoodTypeId, matchedBrandId, matchedCategoryId, quantity ?? null, unit ?? null, finalAddedDate,
                 resolvedExpiryDate, expiryIsEstimated, finalStorage ?? null, req.user.userId]
         );
-        return res.status(201).json({ item: insertRes.rows[0] });
+        const itemRes = await pool.query(
+            `SELECT ${itemSelectFields} FROM items WHERE id = $1`,
+            [insertRes.rows[0].id]
+        );
+        return res.status(201).json({ item: itemRes.rows[0] });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: {
@@ -313,7 +320,9 @@ router.get('/:id', async (req, res) => {
     try {
         const householdId = await getHouseholdId(req.user.userId);
         const itemRes = await pool.query(
-            `SELECT * FROM items WHERE id = $1 AND household_id = $2`,
+            `SELECT ${itemSelectFields}
+             FROM items
+             WHERE id = $1 AND household_id = $2 AND status <> 'removed'`,
             [req.params.id, householdId]
         );
         const item = itemRes.rows[0];
@@ -344,7 +353,7 @@ const updateItemSchema = z.object({
     added_date: z.string().optional(),
     expiry_date: z.string().optional(),
     storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
-    status: z.enum(['active', 'consumed', 'removed', 'expired']).optional(),
+    status: z.enum(['active', 'consumed', 'disposed', 'removed']).optional(),
 });
 
 
@@ -374,9 +383,25 @@ router.patch('/:id', async (req, res) => {
                 expiry_is_estimated = CASE WHEN $7::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
                 storage = COALESCE($8, storage),
                 status = COALESCE($9, status),
+                status_updated_at = CASE WHEN $9::text IS NOT NULL AND $9::text IS DISTINCT FROM status THEN now() ELSE status_updated_at END,
+                consumed_at = CASE
+                    WHEN $9::text = 'consumed' THEN LEAST(CURRENT_DATE, COALESCE(expiry_date, CURRENT_DATE))
+                    WHEN $9::text = 'active' THEN NULL
+                    ELSE consumed_at
+                END,
+                disposed_at = CASE
+                    WHEN $9::text = 'disposed' THEN CURRENT_DATE
+                    WHEN $9::text = 'active' THEN NULL
+                    ELSE disposed_at
+                END,
+                removed_at = CASE
+                    WHEN $9::text = 'removed' THEN CURRENT_DATE
+                    WHEN $9::text = 'active' THEN NULL
+                    ELSE removed_at
+                END,
                 updated_at = now()
             WHERE id = $10 AND household_id = $11
-            RETURNING *`,
+            RETURNING id`,
             [name ?? null, food_type_id ?? null, brand_product_id ?? null, quantity ?? null, unit ?? null, added_date ?? null, expiry_date ?? null,
                 storage ?? null, status ?? null, req.params.id, householdId]
         );
@@ -386,7 +411,11 @@ router.patch('/:id', async (req, res) => {
                 message: 'Item not found'
             }});
         }
-        return res.status(200).json({ item: updateRes.rows[0] });
+        const itemRes = await pool.query(
+            `SELECT ${itemSelectFields} FROM items WHERE id = $1`,
+            [updateRes.rows[0].id]
+        );
+        return res.status(200).json({ item: itemRes.rows[0] });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: {
@@ -400,7 +429,13 @@ router.delete('/:id', async (req, res) => {
     try {
         const householdId = await getHouseholdId(req.user.userId);
         const deleteRes = await pool.query(
-            `DELETE FROM items WHERE id = $1 AND household_id = $2 RETURNING *`,
+            `UPDATE items
+             SET status = 'removed',
+                 status_updated_at = now(),
+                 removed_at = CURRENT_DATE,
+                 updated_at = now()
+             WHERE id = $1 AND household_id = $2 AND status <> 'removed'
+             RETURNING id`,
             [req.params.id, householdId]
         );
         if (deleteRes.rows.length === 0) {

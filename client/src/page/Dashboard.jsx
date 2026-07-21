@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Minus, Plus } from 'lucide-react';
 import { useAuthentication } from '../context/AuthenticationContext';
-import { getItemList } from '../api/item';
+import { getItemList, updateItem } from '../api/item';
 import { getNotifications, updateNotification } from '../api/notification';
 import { AddItemForm } from '../components/AddItemForm';
 import ItemList from '../components/ItemList';
@@ -61,6 +62,12 @@ export default function Dashboard() {
     const [showFilters, setShowFilters] = useState(false);
     const [expiryFilter, setExpiryFilter] = useState(() => new Set());
     const [storageFilter, setStorageFilter] = useState(() => new Set());
+    const [focusedInventoryItemId, setFocusedInventoryItemId] = useState(null);
+    const [bulkConsumeOpen, setBulkConsumeOpen] = useState(false);
+    const [consumeItemTarget, setConsumeItemTarget] = useState(null);
+    const [useItemTarget, setUseItemTarget] = useState(null);
+    const [usedQuantity, setUsedQuantity] = useState(1);
+    const [useError, setUseError] = useState('');
     const [message, setMessage] = useState('');
     const notificationSnoozeKey = useMemo(() => getNotificationSnoozeKey(user?.id), [user?.id]);
     const [dismissedNotificationKey, setDismissedNotificationKey] = useState(() => {
@@ -83,9 +90,12 @@ export default function Dashboard() {
     const activeSection = STORAGE_SECTIONS.find(section => section.id === activeInventoryView);
 
     const visibleInventoryItems = useMemo(() => {
+        if (activeInventoryView === 'item' && focusedInventoryItemId) {
+            return itemList.filter(item => item.id === focusedInventoryItemId);
+        }
         if (!activeInventoryView || activeInventoryView === 'all') return itemList;
         return itemList.filter(item => activeSection?.storageValues.includes(item.storage));
-    }, [activeInventoryView, activeSection, itemList]);
+    }, [activeInventoryView, activeSection, focusedInventoryItemId, itemList]);
 
     const filteredInventoryItems = useMemo(() => {
         // expand the selected expiry buckets into the raw statuses they cover
@@ -123,7 +133,11 @@ export default function Dashboard() {
         setStorageFilter(new Set());
     };
 
-    const inventoryTitle = activeInventoryView === 'all'
+    const focusedInventoryItem = itemList.find(item => item.id === focusedInventoryItemId);
+
+    const inventoryTitle = activeInventoryView === 'item'
+        ? focusedInventoryItem?.name ?? 'Item details'
+        : activeInventoryView === 'all'
         ? 'Full inventory'
         : activeSection?.label ?? 'Inventory';
 
@@ -174,6 +188,7 @@ export default function Dashboard() {
 
     const openEditForm = (item) => {
         setActiveInventoryView(null);
+        setFocusedInventoryItemId(null);
         setEditingItem(item);
         setShowForm(true);
     };
@@ -186,6 +201,82 @@ export default function Dashboard() {
     const refreshAfterItemChange = (text) => {
         fetchItems();
         showTemporaryMessage(text);
+    };
+
+    const openFocusedItem = (item) => {
+        setFocusedInventoryItemId(item.id);
+        setActiveInventoryView('item');
+    };
+
+    const openUseItem = (item) => {
+        setUseItemTarget(item);
+        setUsedQuantity(1);
+        setUseError('');
+    };
+
+    const closeUseItem = () => {
+        setUseItemTarget(null);
+        setUseError('');
+    };
+
+    const currentUseQuantity = Number(useItemTarget?.quantity);
+    const hasTrackableUseQuantity = Number.isFinite(currentUseQuantity) && currentUseQuantity > 0;
+
+    const adjustUsedQuantity = (change) => {
+        setUsedQuantity((value) => {
+            const nextValue = Math.max(1, Number(value || 1) + change);
+            return hasTrackableUseQuantity ? Math.min(nextValue, currentUseQuantity) : nextValue;
+        });
+        setUseError('');
+    };
+
+    const handleUsedQuantityChange = (event) => {
+        const nextValue = Number(event.target.value);
+        if (event.target.value === '') {
+            setUsedQuantity('');
+        } else if (hasTrackableUseQuantity && nextValue > currentUseQuantity) {
+            setUsedQuantity(currentUseQuantity);
+        } else {
+            setUsedQuantity(event.target.value);
+        }
+        setUseError('');
+    };
+
+    const consumeOneItem = async (item) => {
+        await updateItem(item.id, { status: 'consumed' });
+        await fetchItems();
+        showTemporaryMessage(`${item.name} marked as consumed.`);
+    };
+
+    const confirmUseItem = async (event) => {
+        event.preventDefault();
+        const amountUsed = Number(usedQuantity);
+
+        if (!hasTrackableUseQuantity) {
+            setUseError('Set a quantity before using part of this item.');
+            return;
+        }
+        if (!Number.isInteger(amountUsed) || amountUsed <= 0) {
+            setUseError('Enter a whole number greater than 0.');
+            return;
+        }
+        if (amountUsed === currentUseQuantity) {
+            await consumeOneItem(useItemTarget);
+            closeUseItem();
+            return;
+        }
+
+        await updateItem(useItemTarget.id, { quantity: currentUseQuantity - amountUsed });
+        await fetchItems();
+        closeUseItem();
+        showTemporaryMessage(`${useItemTarget.name} quantity updated.`);
+    };
+
+    const consumeAllExpiringItems = async () => {
+        await Promise.all(expiringItems.map(item => updateItem(item.id, { status: 'consumed' })));
+        await fetchItems();
+        setBulkConsumeOpen(false);
+        showTemporaryMessage('Expiring items marked as consumed.');
     };
 
     const markAllNotificationsRead = async () => {
@@ -282,6 +373,10 @@ export default function Dashboard() {
                         )];
                         navigate(`/dashboard/recipes?ingredients=${ids.join(',')}`);
                     }}
+                    onConsumeAll={() => setBulkConsumeOpen(true)}
+                    onConsumeItem={setConsumeItemTarget}
+                    onUseItem={openUseItem}
+                    onViewItem={openFocusedItem}
                 />
             </section>
 
@@ -433,6 +528,75 @@ export default function Dashboard() {
                                 onItemUpdated={() => refreshAfterItemChange('Item successfully updated.')}
                             />
                         )}
+                    </section>
+                </div>
+            )}
+
+            {bulkConsumeOpen && (
+                <div className="modal-backdrop" role="presentation" onMouseDown={() => setBulkConsumeOpen(false)}>
+                    <section className="panel confirm-panel" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
+                        <p>Mark all <strong>{expiringItems.length}</strong> expiring item(s) as consumed?</p>
+                        <div className="button-row">
+                            <button className="button" onClick={consumeAllExpiringItems}>Confirm</button>
+                            <button className="button secondary" onClick={() => setBulkConsumeOpen(false)}>Cancel</button>
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {consumeItemTarget && (
+                <div className="modal-backdrop" role="presentation" onMouseDown={() => setConsumeItemTarget(null)}>
+                    <section className="panel confirm-panel" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
+                        <p>Mark <strong>{consumeItemTarget.name}</strong> as consumed?</p>
+                        <div className="button-row">
+                            <button
+                                className="button"
+                                onClick={async () => {
+                                    await consumeOneItem(consumeItemTarget);
+                                    setConsumeItemTarget(null);
+                                }}
+                            >
+                                Confirm
+                            </button>
+                            <button className="button secondary" onClick={() => setConsumeItemTarget(null)}>Cancel</button>
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {useItemTarget && (
+                <div className="modal-backdrop" role="presentation" onMouseDown={closeUseItem}>
+                    <section className="panel confirm-panel use-item-panel" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
+                        <form onSubmit={confirmUseItem}>
+                            <div>
+                                <h3>How many used?</h3>
+                                <p>{useItemTarget.name}</p>
+                            </div>
+                            <div className="quantity-stepper">
+                                <button type="button" className="icon-button item-action-button" onClick={() => adjustUsedQuantity(-1)} aria-label="Decrease amount used">
+                                    <Minus size={16} />
+                                </button>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={hasTrackableUseQuantity ? currentUseQuantity : undefined}
+                                    step="1"
+                                    inputMode="numeric"
+                                    value={usedQuantity}
+                                    onChange={handleUsedQuantityChange}
+                                    aria-label="Quantity used"
+                                    autoFocus
+                                />
+                                <button type="button" className="icon-button item-action-button" onClick={() => adjustUsedQuantity(1)} aria-label="Increase amount used">
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+                            {useError && <p className="message error">{useError}</p>}
+                            <div className="button-row">
+                                <button className="button" type="submit">Update</button>
+                                <button className="button secondary" type="button" onClick={closeUseItem}>Cancel</button>
+                            </div>
+                        </form>
                     </section>
                 </div>
             )}
