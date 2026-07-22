@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { client } from '../api/client';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthentication } from '../context/AuthenticationContext';
 import BrandTitle from '../components/BrandTitle';
@@ -30,7 +30,7 @@ export default function SignupPage() {
 
         setSubmitting(true);
         try {
-            const response = await axios.post('/api/v1/auth/signup', {
+            const response = await client.post('/api/v1/auth/signup', {
                 display_name: displayName,
                 email,
                 password,
