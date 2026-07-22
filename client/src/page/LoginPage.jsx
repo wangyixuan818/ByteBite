@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { client } from '../api/client';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthentication } from '../context/AuthenticationContext';
 import BrandTitle from '../components/BrandTitle';
@@ -23,7 +23,7 @@ export default function LoginPage() {
 
         setSubmitting(true);
         try {
-            const response = await axios.post('/api/v1/auth/login', { email, password });
+            const response = await client.post('/api/v1/auth/login', { email, password });
             login(response.data.user, response.data.token);
             navigate('/dashboard');
         } catch (err) {

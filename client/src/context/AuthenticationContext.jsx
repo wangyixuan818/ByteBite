@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- existing context module intentionally shares provider helpers */
 import {createContext, useContext, useEffect, useState} from 'react';
-import axios from 'axios';
+import { client } from '../api/client';
 
 const AuthenticationContext = createContext(null);
 
@@ -22,7 +22,7 @@ export function AuthenticationProvider({children}) {
        if (!headers) {
         return;
        }
-       axios.get('/api/v1/auth/me', { headers})
+       client.get('/api/v1/auth/me', { headers})
         .then(res => setUser(res.data.user))
         .catch(() => localStorage.removeItem('authenticationToken'))
         .finally(() => setLoading(false)); 
@@ -41,7 +41,7 @@ export function AuthenticationProvider({children}) {
     const logout = () => {
         const headers = getAuthHeader();
         // we clear client state regardless of response
-        axios.post('/api/v1/auth/logout', {}, { headers })
+        client.post('/api/v1/auth/logout', {}, { headers })
           .catch(() => {});
 
         localStorage.removeItem('authenticationToken');
