@@ -1935,3 +1935,40 @@
     visibility: visible;
 }
 .tooltip-wrap > .usage-suggestion-button { width: 100%; }
+.qa-bubble {
+    position: fixed; right: 24px; bottom: 24px; z-index: 60;
+    width: 56px; height: 56px; border-radius: 50%;
+    border: none; cursor: pointer;
+    background: #7f9c6d; color: #fdfbf0;
+    font-size: 1.8rem; line-height: 1;
+    box-shadow: 0 8px 20px rgba(35, 44, 31, .28);
+}
+.qa-bubble:hover { filter: brightness(1.05); }
+.qa-panel {
+    position: fixed; right: 24px; bottom: 92px; z-index: 60;
+    width: min(340px, calc(100vw - 48px));
+    background: #fdfbf0; border: 1px solid rgba(83, 112, 76, .3);
+    border-radius: 14px; padding: 16px;
+    box-shadow: 0 14px 40px rgba(35, 44, 31, .22);
+    display: flex; flex-direction: column; gap: 10px;
+}
+.qa-header { display: flex; justify-content: space-between; align-items: center; color: #315438; }
+.qa-close { border: none; background: transparent; font-size: 1.3rem; cursor: pointer; color: #315438; }
+.qa-hint { font-size: .82rem; color: #67835c; margin: 0; }
+.qa-form { display: flex; gap: 8px; }
+.qa-input {
+    flex: 1; border: 1px solid rgba(83, 112, 76, .3); border-radius: 999px;
+    padding: 8px 14px; outline: none; color: #2f4a33; background: #fff;
+}
+.qa-go {
+    border: none; border-radius: 999px; padding: 8px 16px; cursor: pointer;
+    background: #7f9c6d; color: #fdfbf0;
+}
+.qa-confirm { background: rgba(120, 145, 100, .12); border-radius: 10px; padding: 10px 12px; }
+.qa-confirm p { margin: 0 0 8px; color: #2f4a33; font-size: .92rem; }
+.qa-muted { color: #67835c; }
+.qa-confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.qa-cancel { border: 1px solid rgba(83, 112, 76, .35); background: transparent; color: #315438; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.qa-add { border: none; background: #7f9c6d; color: #fdfbf0; border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+.qa-message { font-size: .85rem; color: #3a7a3f; margin: 0; }
+.qa-message.error { color: #a1603a; }

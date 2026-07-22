@@ -7,19 +7,23 @@ import ProtectedRoute from './route/ProtectedRoute'
 import LandingPage from './page/LandingPage'
 import SuggestionPage from './page/SuggestionPage'
 import RecipeDetailPage from './page/RecipeDetailPage'
+import QuickAddAssistant from './components/QuickAddAssistant'
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage/>} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route element={<ProtectedRoute />}>
-        <Route path='/dashboard' element={<Dashboard />} />
-        <Route path='/dashboard/recipes' element={<SuggestionPage />} />
-        <Route path='/dashboard/recipes/:id' element={<RecipeDetailPage />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<LandingPage/>} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path='/dashboard' element={<Dashboard />} />
+          <Route path='/dashboard/recipes' element={<SuggestionPage />} />
+          <Route path='/dashboard/recipes/:id' element={<RecipeDetailPage />} />
+        </Route>
+      </Routes>
+      <QuickAddAssistant />
+    </>
   )
 }
 
