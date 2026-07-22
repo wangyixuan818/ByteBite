@@ -66,9 +66,36 @@ Table user_household {
   Note: 'unique (user_id, household_id), a user cant join the same household twice'
 }
 
+Table fridges {
+  id bigint [primary key]
+  household_id bigint [not null]
+  name text [not null]
+  model_type text [not null, note: "check (model_type in ('two_layered','three_layered','mini','side_by_side'))"]
+  created_by bigint
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table storage_sections {
+  id bigint [primary key]
+  household_id bigint [not null]
+  fridge_id bigint
+  name text [not null]
+  section_type text [not null, note: "check (section_type in ('fridge','freezer','fresh_zone','pantry'))"]
+  section_key text [not null]
+  position integer [not null]
+  has_door_space boolean [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Note: 'unique(fridge_id, section_key) where fridge_id is not null; unique(household_id, section_key) where fridge_id is null'
+}
+
 Table items {
   id bigint [primary key]
   household_id bigint [not null]
+  fridge_id bigint
+  storage_section_id bigint
   name text [not null]
   brand_product_id bigint
   food_type_id bigint
@@ -85,6 +112,7 @@ Table items {
   disposed_at date
   removed_at date
   storage text [note: "check (storage in ('fridge','pantry','freezer', 'fridge door', 'fresh zone'))"]
+  is_in_door boolean [not null]
   created_by bigint
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -129,8 +157,16 @@ Table recipe_food_types {
 Ref: user_household.user_id > users.id // many-to-one
 Ref: user_household.household_id > households.id // many-to-one
 
+// Relationships for fridge setup
+Ref: fridges.household_id > households.id // many-to-one
+Ref: fridges.created_by > users.id // many-to-one
+Ref: storage_sections.household_id > households.id // many-to-one
+Ref: storage_sections.fridge_id > fridges.id // many-to-one, nullable for pantry
+
 // Relationships for items
 Ref: items.household_id > households.id // many-to-one
+Ref: items.fridge_id > fridges.id // many-to-one
+Ref: items.storage_section_id > storage_sections.id // many-to-one
 Ref: items.food_type_id > food_types.id // many-to-one
 Ref: items.brand_product_id > brand_products.id // many-to-one
 Ref: items.created_by > users.id // many-to-one

@@ -17,6 +17,18 @@ async function cleanDatabase() {
     `);
     await pool.query('DELETE FROM notifications');
     await pool.query('DELETE FROM items');
+    await pool.query(`
+        DO $$
+        BEGIN
+            IF to_regclass('public.storage_sections') IS NOT NULL THEN
+                DELETE FROM storage_sections;
+            END IF;
+
+            IF to_regclass('public.fridges') IS NOT NULL THEN
+                DELETE FROM fridges;
+            END IF;
+        END $$;
+    `);
     await pool.query('DELETE FROM brand_products');
     await pool.query('DELETE FROM food_types');
     await pool.query('DELETE FROM categories');
