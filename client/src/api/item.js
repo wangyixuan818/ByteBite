@@ -63,3 +63,13 @@ export const deleteItem = (id) => {
 
     return client.delete(`/api/v1/items/${id}`, { headers });
 }
+
+export const consumeItem = (id, quantity) => {
+    const headers = getAuthHeader();
+    return client.post(`/api/v1/items/${id}/consume`, quantity != null ? { quantity } : {}, { headers });
+};
+
+export const disposeItem = (id, quantity) => {
+    const headers = getAuthHeader();
+    return client.post(`/api/v1/items/${id}/dispose`, quantity != null ? { quantity } : {}, { headers });
+};
