@@ -10,6 +10,7 @@ const blankDetails = {
     quantity: 1,
     unit: '',
     storage: '',
+    storageTarget: '',
     expiryDate: '',
     // estimateExpiry: true,  
     saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
@@ -34,7 +35,7 @@ const placeholderIcon = categoryIconBySlug['custom-placeholder'];
 const getCategoryIcon = (name) => categoryIconBySlug[slugify(name)] ?? placeholderIcon;
 const getFoodTypeIcon = (name) => foodTypeIconBySlug[slugify(name)] ?? placeholderIcon;
 
-export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) => {
+export const AddItemForm = ({ itemToEdit = null, storageOptions = [], onItemAdded, onItemUpdated }) => {
     const isEditing = Boolean(itemToEdit);
     const [step, setStep] = useState(isEditing ? 'details' : 'category');
     const [categories, setCategories] = useState([]);
@@ -53,6 +54,9 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         quantity: itemToEdit.quantity ?? 1,
         unit: itemToEdit.unit ?? '',
         storage: itemToEdit.storage ?? '',
+        storageTarget: itemToEdit.storage_section_id
+            ? `section:${itemToEdit.storage_section_id}:${itemToEdit.is_in_door ? 'door' : 'main'}`
+            : itemToEdit.storage ?? '',
         expiryDate: toDateInput(itemToEdit.expiry_date),
         // estimateExpiry: false,
         saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
@@ -199,6 +203,18 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             brand_product_id: selectedBrandProductId ? Number(selectedBrandProductId) : undefined,
         };
 
+        if (details.storageTarget?.startsWith('section:')) {
+            const [, sectionId, placement] = details.storageTarget.split(':');
+            const selectedOption = storageOptions.find(option => option.value === details.storageTarget);
+            payload.storage_section_id = Number(sectionId);
+            payload.is_in_door = placement === 'door';
+            payload.storage = selectedOption?.storage || details.storage || undefined;
+        } else if (details.storageTarget) {
+            payload.storage = details.storageTarget;
+            if (isEditing) payload.storage_section_id = null;
+            payload.is_in_door = false;
+        }
+
         if (!isEditing && categoryId) payload.category_id = categoryId;
         if (details.expiryDate) payload.expiry_date = details.expiryDate;
 
@@ -335,8 +351,23 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
 
                 <label>
                     Storage
-                    <select value={details.storage} onChange={event => updateDetail('storage', event.target.value)}>
+                    <select
+                        value={details.storageTarget || details.storage}
+                        onChange={event => {
+                            const selectedValue = event.target.value;
+                            const selectedOption = storageOptions.find(option => option.value === selectedValue);
+                            setDetails(current => ({
+                                ...current,
+                                storageTarget: selectedValue,
+                                storage: selectedOption?.storage ?? selectedValue,
+                            }));
+                        }}
+                    >
                         <option value="">Use catalog default</option>
+                        {storageOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                        {storageOptions.length > 0 && <option disabled>-- Old labels --</option>}
                         <option value="fridge">Fridge</option>
                         <option value="fresh zone">Fresh zone</option>
                         <option value="freezer">Freezer</option>
