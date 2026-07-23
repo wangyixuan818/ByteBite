@@ -3,10 +3,14 @@ import { useAuthentication } from '../context/AuthenticationContext';
 import { addItem, getFoodTypes } from '../api/item';
 import { normaliseName, searchByName } from '../utils/text';
 
+
 // date parsing
 const MONTHS = { jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12 };
 const pad = n => String(n).padStart(2, '0');
 const iso = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+
+// browser speech recognition (Chrome/Edge/Safari; not Firefox)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 // build a date, rolling to next year if it's already past (used when no year was given)
 function futureDated(year, month, day) {
@@ -18,7 +22,25 @@ function futureDated(year, month, day) {
 }
 
 function parseDate(str) {
-    const s = str.trim().toLowerCase();
+    // drop ordinal suffixes: "17th" -> "17", "3rd" -> "3" (speech often adds them)
+    const s = str.trim().toLowerCase().replace(/(\d{1,2})(?:st|nd|rd|th)\b/g, '$1');
+
+
+// relative dates
+    const base = new Date();
+    const addDays = (n) => { const d = new Date(base); d.setDate(d.getDate() + n); return iso(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
+    if (s === 'today') return addDays(0);
+    if (s === 'tomorrow' || s === 'tmr' || s === 'tmrw') return addDays(1);
+    let rel = s.match(/^in\s+(\d+)\s+days?$/);
+    if (rel) return addDays(+rel[1]);
+    rel = s.match(/^in\s+(a|an|one)\s+(day|week)$/);
+    if (rel) return addDays(rel[2] === 'week' ? 7 : 1);
+    rel = s.match(/^in\s+(\d+)\s+weeks?$/);
+    if (rel) return addDays(+rel[1] * 7);
+    rel = s.match(/^next\s+week$/);
+    if (rel) return addDays(7);
+
+
     const year = new Date().getFullYear();
     let m;
     if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) return iso(+m[1], +m[2], +m[3]);          // 2026-06-17
@@ -28,17 +50,63 @@ function parseDate(str) {
     }
     // 17 june  /  17 june 2027
     if ((m = s.match(/^(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?$/)) && MONTHS[m[2]]) {
-        return m[3] ? iso(+m[3], MONTHS[m[2]], +m[1]) : futureDated(year, MONTHS[m[2]], +m[1]);
+        return iso(m[3] ? +m[3] : year, MONTHS[m[2]], +m[1]);
     }
     // june 17  /  june 17 2027
     if ((m = s.match(/^([a-z]+)\s+(\d{1,2})(?:\s+(\d{4}))?$/)) && MONTHS[m[1]]) {
-        return m[3] ? iso(+m[3], MONTHS[m[1]], +m[2]) : futureDated(year, MONTHS[m[1]], +m[2]);
+        return iso(m[3] ? +m[3] : year, MONTHS[m[1]], +m[2]);
     }
     return null;
 }
 
 // command parsing
 const titleCase = s => s.replace(/\b\w/g, c => c.toUpperCase());
+
+const NUMBER_WORDS = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10,
+    eleven:11, twelve:12, dozen:12, a:1, an:1,
+
+    // homophones / common speech mis-hears -> the digit they sounded like
+    to:2, too:2,
+    tree:3, free:3, time:3,          // "three"
+    for:4, fore:4,                   // "four"
+    ate:8,                           // "eight"
+    won:1,                           // "one"
+    tin:10, ten:10,                  // "ten"
+    sex:6,                           // "six" (it happens)
+    nain:9, night:9,                 // "nine"
+};
+
+// turn a leading spoken number word into a digit, so things like "add to bread" becomes "add 2 bread"
+function normaliseQuantityWord(s) {
+    return s.replace(/^(\w+)\s+/, (whole, word) => {
+        const n = NUMBER_WORDS[word.toLowerCase()];
+        return n !== undefined ? `${n} ` : whole;
+    });
+}
+
+// common mishears for the trigger word "add"
+const ADD_WORDS = new Set(['add', 'at', 'ad', 'and', 'had', 'a', 'ada', 'adds', 'att']);
+
+// if the command starts with an "add" like word, treat it as "add" and strip it
+function stripAddWord(s) {
+    const first = s.match(/^(\w+)\s+/);
+    if (first && ADD_WORDS.has(first[1].toLowerCase())) {
+        return s.slice(first[0].length);
+    }
+    return s;   // no add-like opener leave it (still parseable)
+}
+
+// clean a transcript for display: normalise the "add" like verb TO "add" (kept)
+// and turn the following number-word into a digit
+function cleanForDisplay(raw) {
+    let s = raw.trim().toLowerCase();
+    const first = s.match(/^(\w+)\s+/);
+    if (first && ADD_WORDS.has(first[1])) {
+        return 'add ' + normaliseQuantityWord(s.slice(first[0].length));  // keep "add", clean the number after it
+    }
+    return normaliseQuantityWord(s);   // no add-verb, just clean the leading number
+}
 
 function matchFoodType(name, foodTypes) {
     const key = normaliseName(name);
@@ -50,11 +118,12 @@ function matchFoodType(name, foodTypes) {
 function parseCommand(input, foodTypes) {
     let s = input.trim().toLowerCase();
     if (!s) return null;
-    s = s.replace(/^add\s+/, '');   // optional leading "add"
+    s = stripAddWord(s);               // optional leading "add"
+    s = normaliseQuantityWord(s);       // "to"/"two"/"a" -> a digit
 
     // pull off an "expire <date>" tail, if the keyword is present
     let expiryDate;
-    const exp = s.match(/\s+(?:expire|expires|expiry|exp)\s+(.+)$/);
+    const exp = s.match(/\s+(?:expire|expires|expiry|exp|expired|expiration|by|on|expiring)\s+(.+)$/);
     if (exp) {
         expiryDate = parseDate(exp[1]) ?? undefined;
         s = s.slice(0, exp.index).trim();
@@ -95,6 +164,7 @@ export default function QuickAddAssistant() {
     const [adding, setAdding] = useState(false);
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
+    const [listening, setListening] = useState(false);
 
     if (!user) return null;   // only for signed-in users
 
@@ -138,6 +208,52 @@ export default function QuickAddAssistant() {
         }
     };
 
+    const startVoice = () => {
+        if (!SpeechRecognition) {
+            setIsError(true);
+            setMessage('Voice input is not supported in this browser. Try Chrome.');
+            return;
+        }
+        if (listening) return;   // ignore clicks while already listening
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-SG';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        setMessage(''); setIsError(false);
+
+        recognition.onresult = (event) => {
+            const raw = event.results[0][0].transcript;
+            const shown = cleanForDisplay(raw);
+            setText(shown);                              // box shows "add 3 bread"
+            const result = parseCommand(shown, foodTypes);
+            if (result) { setParsed(result); setMessage(''); setIsError(false); }
+            else { setIsError(true); setMessage('Did not catch a valid command — try again.'); }
+        };
+
+        recognition.onerror = (event) => {
+            setIsError(true);
+            const reasons = {
+                'not-allowed': 'Microphone is blocked. Allow it in the browser (see the address bar), then retry.',
+                'service-not-allowed': 'Microphone is blocked. Allow it in the browser, then retry.',
+                'no-speech': 'Did not catch any speech — try again.',
+                'audio-capture': 'No microphone found on this device.',
+                'network': 'Speech service could not be reached (check your connection).',
+            };
+            setMessage(reasons[event.error] || `Voice error: ${event.error}`);
+            setListening(false);          // reset here too, onend may not fire on error
+        };
+        recognition.onend = () => setListening(false);
+
+        try {
+            recognition.start();
+            setListening(true);
+        } catch {
+            setListening(false);          // start() can throw if a previous session hasnt released
+        }
+    };
+
     return (
         <>
             {open && (
@@ -157,6 +273,16 @@ export default function QuickAddAssistant() {
                             autoFocus
                         />
                         <button type="submit" className="qa-go">Go</button>
+
+                        <button
+                            type="button"
+                            className={`qa-mic${listening ? ' listening' : ''}`}
+                            onClick={startVoice}
+                            aria-label="Speak a command"
+                            title="Speak"
+                        >
+                            🎤
+                        </button>
                     </form>
 
                     {parsed && (

@@ -1972,3 +1972,18 @@
 .qa-add { border: none; background: #7f9c6d; color: #fdfbf0; border-radius: 999px; padding: 6px 16px; cursor: pointer; }
 .qa-message { font-size: .85rem; color: #3a7a3f; margin: 0; }
 .qa-message.error { color: #a1603a; }
+.qa-mic {
+    border: 1px solid rgba(83, 112, 76, .3);
+    background: #fff;
+    border-radius: 999px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+}
+.qa-mic.listening {
+    background: #df6f55;
+    border-color: #df6f55;
+    animation: qa-pulse 1s ease-in-out infinite;
+}
+@keyframes qa-pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
