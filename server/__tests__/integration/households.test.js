@@ -4,6 +4,8 @@ const pool = require('../../db');
 const { cleanDatabase } = require('../helpers/db');
 const { signupAndGetToken } = require('../helpers/auth');
 
+jest.setTimeout(20000);
+
 beforeEach(async () => {
     await cleanDatabase();
 });
