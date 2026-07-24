@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuthentication } from '../context/AuthenticationContext';
-import { addItem, getFoodTypes } from '../api/item';
+import { addItem, getFoodTypes, getItemList, consumeItem, disposeItem, deleteItem } from '../api/item';
 import { normaliseName, searchByName } from '../utils/text';
 
 
@@ -97,15 +97,14 @@ function stripAddWord(s) {
     return s;   // no add-like opener leave it (still parseable)
 }
 
-// clean a transcript for display: normalise the "add" like verb TO "add" (kept)
-// and turn the following number-word into a digit
+// clean a transcript for display: normalise the "add" like verb TO "add" 
+// and turn the following number word into a digit
 function cleanForDisplay(raw) {
-    let s = raw.trim().toLowerCase();
+    const s = raw.trim().toLowerCase();
+    const { action, rest } = detectAction(s);
+    const body = action === 'add' ? stripAddWord(rest) : rest;
     const first = s.match(/^(\w+)\s+/);
-    if (first && ADD_WORDS.has(first[1])) {
-        return 'add ' + normaliseQuantityWord(s.slice(first[0].length));  // keep "add", clean the number after it
-    }
-    return normaliseQuantityWord(s);   // no add-verb, just clean the leading number
+    return `${ACTION_LABEL[action]} ${normaliseQuantityWord(body)}`.trim();
 }
 
 function matchFoodType(name, foodTypes) {
@@ -118,41 +117,75 @@ function matchFoodType(name, foodTypes) {
 function parseCommand(input, foodTypes) {
     let s = input.trim().toLowerCase();
     if (!s) return null;
-    s = stripAddWord(s);               // optional leading "add"
-    s = normaliseQuantityWord(s);       // "to"/"two"/"a" -> a digit
 
-    // pull off an "expire <date>" tail, if the keyword is present
+    const { action, rest } = detectAction(s);
+    s = action === 'add' ? stripAddWord(rest) : rest;   // "add" may still carry the word while verbs already stripped
+    s = normaliseQuantityWord(s);
+
+    // expiry only makes sense for add
     let expiryDate;
-    const exp = s.match(/\s+(?:expire|expires|expiry|exp|expired|expiration|by|on|expiring)\s+(.+)$/);
-    if (exp) {
-        expiryDate = parseDate(exp[1]) ?? undefined;
-        s = s.slice(0, exp.index).trim();
-    }
-
-    // no "expire" keyword? try to peel a date off the end anyway
-    if (!exp) {
-        const tail = s.match(/\s+(\d{1,2}\s+[a-z]+(?:\s+\d{4})?|[a-z]+\s+\d{1,2}(?:\s+\d{4})?|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|\d{4}-\d{1,2}-\d{1,2})$/);
-        if (tail) {
-            const maybe = parseDate(tail[1]);
-            if (maybe) { expiryDate = maybe; s = s.slice(0, tail.index).trim(); }
+    if (action === 'add') {
+        const exp = s.match(/\s+(?:expire|expires|expiry|exp|expired|expiration|by|on|expiring)\s+(.+)$/);
+        if (exp) {
+            expiryDate = parseDate(exp[1]) ?? undefined;
+            s = s.slice(0, exp.index).trim();
+        } else {
+            const tail = s.match(/\s+(\d{1,2}\s+[a-z]+(?:\s+\d{4})?|[a-z]+\s+\d{1,2}(?:\s+\d{4})?|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|\d{4}-\d{1,2}-\d{1,2})$/);
+            if (tail) { const maybe = parseDate(tail[1]); if (maybe) { expiryDate = maybe; s = s.slice(0, tail.index).trim(); } }
         }
     }
 
-    // leading quantity (a number, or "a"/"an" = 1)
-    let quantity = 1, m;
+    // quantity: a number or "a"/"an"
+    // null = unspecified which means "the whole thing" for consume or dispose
+    let quantity = null, m;
     if ((m = s.match(/^(\d+)\s+(.+)$/))) { quantity = parseInt(m[1], 10); s = m[2].trim(); }
-    else if ((m = s.match(/^(a|an)\s+(.+)$/))) { s = m[2].trim(); }
+    else if ((m = s.match(/^(a|an)\s+(.+)$/))) { quantity = 1; s = m[2].trim(); }
 
     const rawName = s.trim();
     if (!rawName) return null;
 
     const match = matchFoodType(rawName, foodTypes);
     return {
+        action,
         quantity,
+        rawName,
         displayName: match ? match.name : titleCase(rawName),
         foodTypeId: match?.id,
         expiryDate,
     };
+}
+
+const VERBS = [
+    { action: 'consume', words: ['consume','consumed','eat','ate','eaten','finish','finished','use','used','drink','drank','had'] },
+    { action: 'dispose', words: ['dispose','disposed','throw','threw','thrown','throwaway','bin','binned','chuck','chucked','toss','tossed','waste','wasted','discard','discarded'] },
+    { action: 'delete',  words: ['delete','deleted','remove','removed','cancel','undo'] },
+];
+
+const ACTION_LABEL = { add: 'add', consume: 'consume', dispose: 'throw away', delete: 'delete' };
+
+// detect a leading verb; strip it (and a trailing "away"/"out"); default to "add"
+function detectAction(s) {
+    for (const v of VERBS) {
+        for (const w of v.words) {
+            const re = new RegExp(`^${w}(?:\\s+(?:away|out|the))?\\s+`, 'i');
+            if (re.test(s)) return { action: v.action, rest: s.replace(re, '') };
+        }
+    }
+    return { action: 'add', rest: s };   // no verb means add (keeps existing behaviour)
+}
+
+// find which inventory item a consume/dispose/delete refers to: exact name, else fuzzy
+// closest to expiry prioritised
+function findTargetItem(name, items) {
+    const key = normaliseName(name);
+    const exact = items.filter(it => normaliseName(it.name) === key);
+    const pool = exact.length ? exact : searchByName(items, name);
+    if (!pool.length) return null;
+    return [...pool].sort((a, b) => {
+        const ax = a.expiry_date ?? '9999-12-31';   // no-expiry items sort last
+        const bx = b.expiry_date ?? '9999-12-31';
+        return ax < bx ? -1 : ax > bx ? 1 : 0;
+    })[0];
 }
 
 export default function QuickAddAssistant() {
@@ -165,44 +198,78 @@ export default function QuickAddAssistant() {
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
     const [listening, setListening] = useState(false);
+    const [items, setItems] = useState([]);
 
     if (!user) return null;   // only for signed-in users
 
     const openPanel = async () => {
         setOpen(true);
-        if (foodTypes.length === 0) {
-            try {
-                const res = await getFoodTypes();
-                setFoodTypes(res.data);
-            } catch { /* matching just falls back to the raw name */ }
-        }
+        try {
+            if (foodTypes.length === 0) { const r = await getFoodTypes(); setFoodTypes(r.data); }
+            const it = await getItemList();      // fresh inventory each open, so lookups are current
+            setItems(it.data);
+        } catch { /* matching falls back gracefully */ }
     };
 
-    const handleParse = (e) => {
+        const handleParse = (e) => {
         e.preventDefault();
         setMessage(''); setIsError(false);
         const result = parseCommand(text, foodTypes);
         if (!result) {
             setParsed(null); setIsError(true);
-            setMessage('Try "add 12 eggs" or "add 2 milk expire 17 june".');
+            setMessage('Try "add 12 eggs"; "consume 2 milk"; or "throw away eggs".');
             return;
         }
-        setParsed(result);
+        if (result.action === 'add') { setParsed(result); return; }
+
+        // consume / dispose / delete: find the item to act on
+        const target = findTargetItem(result.rawName, items);
+        if (!target) {
+            setParsed(null); setIsError(true);
+            setMessage(`You don't have any ${result.displayName} in your inventory.`);
+            return;
+        }
+        const have = Number(target.quantity ?? 1);
+        let amount = result.quantity == null ? have : result.quantity;
+        const capped = amount > have;               // asked for more than exists
+        if (capped) amount = have;                  // cap at the max possible
+        setParsed({
+            ...result,
+            itemId: target.id,
+            itemName: target.name,
+            have,
+            amount,
+            whole: result.quantity == null || amount >= have,
+            capped,
+        });
     };
 
     const handleConfirm = async () => {
         setAdding(true); setMessage(''); setIsError(false);
+        const p = parsed;
         try {
-            const payload = { name: parsed.displayName, quantity: parsed.quantity };
-            if (parsed.foodTypeId) payload.food_type_id = parsed.foodTypeId;
-            if (parsed.expiryDate) payload.expiry_date = parsed.expiryDate;
-            await addItem(payload);
-            setMessage(`Added ${parsed.quantity} × ${parsed.displayName}.`);
+            if (p.action === 'add') {
+                const payload = { name: p.displayName, quantity: p.quantity ?? 1 };
+                if (p.foodTypeId) payload.food_type_id = p.foodTypeId;
+                if (p.expiryDate) payload.expiry_date = p.expiryDate;
+                await addItem(payload);
+                setMessage(`Added ${p.quantity ?? 1} × ${p.displayName}.`);
+            } else if (p.action === 'consume') {
+                await consumeItem(p.itemId, p.whole ? null : p.amount);
+                setMessage(`Consumed ${p.whole ? 'all' : `${p.amount} ×`} ${p.itemName}.`);
+            } else if (p.action === 'dispose') {
+                await disposeItem(p.itemId, p.whole ? null : p.amount);
+                setMessage(`Threw away ${p.whole ? 'all' : `${p.amount} ×`} ${p.itemName}.`);
+            } else if (p.action === 'delete') {
+                await deleteItem(p.itemId);
+                setMessage(`Removed ${p.itemName} from inventory.`);
+            }
             setParsed(null); setText('');
             window.dispatchEvent(new CustomEvent('bytebite:item-added'));
+            try { const it = await getItemList(); setItems(it.data); } catch { /* ignore */ }
         } catch (err) {
             setIsError(true);
-            setMessage(err.response?.data?.error?.message || 'Could not add that item.');
+            setMessage(err.response?.data?.error?.message || 'Could not complete that.');
         } finally {
             setAdding(false);
         }
@@ -262,14 +329,14 @@ export default function QuickAddAssistant() {
                         <strong>Quick add</strong>
                         <button className="qa-close" onClick={() => setOpen(false)} aria-label="Close">×</button>
                     </div>
-                    <p className="qa-hint">Type a command like “add 12 eggs” or “add 2 milk expire 17 june”.</p>
+                    <p className="qa-hint">Try “add 12 eggs”, “consume 2 milk”, “throw away bread”, or “delete rice”.</p>
 
                     <form onSubmit={handleParse} className="qa-form">
                         <input
                             className="qa-input"
                             value={text}
                             onChange={e => setText(e.target.value)}
-                            placeholder="add 12 eggs..."
+                            placeholder="add 12 eggs; consume 2 milk..."
                             autoFocus
                         />
                         <button type="submit" className="qa-go">Go</button>
@@ -287,16 +354,29 @@ export default function QuickAddAssistant() {
 
                     {parsed && (
                         <div className="qa-confirm">
-                            <p>
-                                Add <strong>{parsed.quantity} × {parsed.displayName}</strong>
-                                {parsed.expiryDate
-                                    ? <>, expiring <strong>{parsed.expiryDate}</strong>?</>
-                                    : <> <span className="qa-muted">(expiry auto-estimated)</span>?</>}
-                            </p>
+                            {parsed.action === 'add' && (
+                                <p>
+                                    ➕ Add <strong>{parsed.quantity ?? 1} × {parsed.displayName}</strong>
+                                    {parsed.expiryDate
+                                        ? <>, expiring <strong>{parsed.expiryDate}</strong>?</>
+                                        : <> <span className="qa-muted">(expiry auto-estimated)</span>?</>}
+                                </p>
+                            )}
+                            {parsed.action === 'consume' && (
+                                <p>🥄 Consume <strong>{parsed.whole ? `all ${parsed.have}` : parsed.amount} × {parsed.itemName}</strong>?
+                                    {parsed.capped && <span className="qa-muted"> (only {parsed.have} in stock)</span>}</p>
+                            )}
+                            {parsed.action === 'dispose' && (
+                                <p>🗑️ Throw away <strong>{parsed.whole ? `all ${parsed.have}` : parsed.amount} × {parsed.itemName}</strong>?
+                                    {parsed.capped && <span className="qa-muted"> (only {parsed.have} in stock)</span>}</p>
+                            )}
+                            {parsed.action === 'delete' && (
+                                <p>✕ Remove <strong>{parsed.itemName}</strong> from inventory?</p>
+                            )}
                             <div className="qa-confirm-actions">
                                 <button className="qa-cancel" onClick={() => setParsed(null)}>Cancel</button>
                                 <button className="qa-add" onClick={handleConfirm} disabled={adding}>
-                                    {adding ? 'Adding...' : 'Add it'}
+                                    {adding ? 'Working...' : 'Confirm'}
                                 </button>
                             </div>
                         </div>

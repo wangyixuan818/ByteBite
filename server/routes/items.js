@@ -457,7 +457,7 @@ router.delete('/:id', async (req, res) => {
 // shared helper for consumed/disposed actions
 async function actOnItem(req, res, targetStatus, dateColumn) {
     // dateColumn is a hardcoded internal value ('consumed_at' | 'disposed_at'), never user input
-    const client = await poll.connect();
+    const client = await pool.connect();
     try {
         const householdId = await getHouseholdId(req.user.userId);
         const requested = req.body?.quantity;
