@@ -8,7 +8,7 @@ import { AddItemForm } from '../components/AddItemForm';
 import ItemList from '../components/ItemList';
 import NotificationInbox from '../components/NotificationInbox';
 import BrandTitle from '../components/BrandTitle';
-import { foldText, normaliseName, searchByName } from '../utils/text';
+import { searchByName } from '../utils/text';
 
 const EXPIRY_STATUSES = new Set([
     'expired',
@@ -31,6 +31,23 @@ const EXPIRY_FILTERS = [
     { id: 'fresh', label: 'Fresh', statuses: ['ok'] },
     { id: 'no_date', label: 'No date', statuses: ['no_date'] },
 ];
+
+function StorageComboIcon({ className = '' }) {
+    return (
+        <span className={`storage-combo-icon ${className}`} aria-hidden="true">
+            <span className="storage-combo-fridge">
+                <span />
+                <span />
+                <span />
+            </span>
+            <span className="storage-combo-pantry">
+                <span />
+                <span />
+                <span />
+            </span>
+        </span>
+    );
+}
 
 function todayKey() {
     const date = new Date();
@@ -57,7 +74,9 @@ export default function Dashboard() {
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [inventoryPanelMode, setInventoryPanelMode] = useState('visual');
     const [activeInventoryView, setActiveInventoryView] = useState(null);
+    const [inventoryOverlayKind, setInventoryOverlayKind] = useState('visual');
     const [searchText, setSearchText] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [expiryFilter, setExpiryFilter] = useState(() => new Set());
@@ -125,8 +144,20 @@ export default function Dashboard() {
         });
     };
 
+    const openVisualInventory = () => {
+        setInventoryOverlayKind('visual');
+        setActiveInventoryView('all');
+    };
+
+    const openSectionInventory = (view, { filters = false } = {}) => {
+        setInventoryOverlayKind('list');
+        setShowFilters(filters);
+        setActiveInventoryView(view);
+    };
+
     const closeInventory = () => {
         setActiveInventoryView(null);
+        setInventoryOverlayKind('visual');
         setSearchText('');
         setShowFilters(false);
         setExpiryFilter(new Set());
@@ -205,6 +236,7 @@ export default function Dashboard() {
 
     const openFocusedItem = (item) => {
         setFocusedInventoryItemId(item.id);
+        setInventoryOverlayKind('list');
         setActiveInventoryView('item');
     };
 
@@ -325,7 +357,25 @@ export default function Dashboard() {
                         </div>
                         <div className="visualizer-meta">
                             <span>{itemList.length} item(s)</span>
-                                <button type="button" className="visualizer-filter-button" aria-label="Filter inventory" onClick={() => { setActiveInventoryView('all'); setShowFilters(true); }}>
+                            <div className="fridge-mode-toggle" role="group" aria-label="Inventory panel mode">
+                                <button
+                                    type="button"
+                                    className={inventoryPanelMode === 'visual' ? 'is-active' : ''}
+                                    aria-pressed={inventoryPanelMode === 'visual'}
+                                    onClick={() => setInventoryPanelMode('visual')}
+                                >
+                                    Visual
+                                </button>
+                                <button
+                                    type="button"
+                                    className={inventoryPanelMode === 'sections' ? 'is-active' : ''}
+                                    aria-pressed={inventoryPanelMode === 'sections'}
+                                    onClick={() => setInventoryPanelMode('sections')}
+                                >
+                                    Sections
+                                </button>
+                            </div>
+                            <button type="button" className="visualizer-filter-button" aria-label="Filter inventory" onClick={() => openSectionInventory('all', { filters: true })}>
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <line x1="4" y1="8" x2="20" y2="8" />
                                     <circle cx="9" cy="8" r="2.6" fill="#faf6e6" />
@@ -336,30 +386,32 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="fridge-visual">
-                        <button type="button" className="fridge-section full-inventory" onClick={() => setActiveInventoryView('all')}>
-                            <span className="full-inventory-search" aria-hidden="true">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="7" />
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                </svg>
-                            </span>
-                            <span>View full inventory</span>
-                            <small>{itemList.length} total</small>
-                        </button>
-                        {STORAGE_SECTIONS.map(section => (
-                            <button
-                                type="button"
-                                className={`fridge-section ${section.id}`}
-                                key={section.id}
-                                onClick={() => setActiveInventoryView(section.id)}
-                            >
-                                <span>{section.label}</span>
-                                <small>{countItemsInSection(section)} item(s)</small>
+                    {inventoryPanelMode === 'visual' ? (
+                        <div className="fridge-visual is-icon-mode">
+                            <button type="button" className="fridge-section visual-inventory-entry" aria-label="Open full fridge and pantry inventory" onClick={openVisualInventory}>
+                                <StorageComboIcon className="storage-combo-icon-hero" />
                             </button>
-                        ))}
-
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="fridge-visual">
+                            <button type="button" className="fridge-section full-inventory" onClick={() => openSectionInventory('all')}>
+                                <StorageComboIcon className="storage-combo-icon-tile" />
+                                <span>View full inventory</span>
+                                <small>{itemList.length} total</small>
+                            </button>
+                            {STORAGE_SECTIONS.map(section => (
+                                <button
+                                    type="button"
+                                    className={`fridge-section ${section.id}`}
+                                    key={section.id}
+                                    onClick={() => openSectionInventory(section.id)}
+                                >
+                                    <span>{section.label}</span>
+                                    <small>{countItemsInSection(section)} item(s)</small>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 <NotificationInbox
@@ -419,17 +471,23 @@ export default function Dashboard() {
             )}
 
             {activeInventoryView && (
-                <div className="modal-backdrop" role="presentation" onMouseDown={ closeInventory }>
-                    <section className="modal panel inventory-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" onMouseDown={event => event.stopPropagation()}>
-                         <div className="section-heading">
+                <div className="inventory-stage-backdrop" role="presentation" onMouseDown={ closeInventory }>
+                    <section className={`inventory-stage inventory-modal ${inventoryOverlayKind === 'visual' ? 'has-visualizer' : 'is-list-only'}`} role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" onMouseDown={event => event.stopPropagation()}>
+                        {inventoryOverlayKind === 'visual' && (
+                            <div className="inventory-stage-visual">
+                                <StorageComboIcon className="storage-combo-icon-expanded" />
+                            </div>
+                        )}
+                        <div className="inventory-stage-content">
+                            <div className="section-heading">
                             <div>
                                 <p className="eyebrow">Sorted by expiry date</p>
                                 <h2 id="inventory-modal-title">{inventoryTitle}</h2>
                             </div>
-                            <button className="icon-button" aria-label="Close" onClick={ closeInventory }>×</button>
-                        </div>
+                            <button className="icon-button inventory-stage-close" aria-label="Close" onClick={ closeInventory }>x</button>
+                            </div>
 
-                        <div className="inventory-search">
+                            <div className="inventory-search">
                             <div className="inventory-search-pill">
                                 <input
                                     type="text"
@@ -528,6 +586,7 @@ export default function Dashboard() {
                                 onItemUpdated={() => refreshAfterItemChange('Item successfully updated.')}
                             />
                         )}
+                        </div>
                     </section>
                 </div>
             )}

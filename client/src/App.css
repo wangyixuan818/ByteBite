@@ -618,10 +618,43 @@
 }
 .fridge-panel { display: flex; flex-direction: column; gap: 16px; }
 .fridge-visual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fridge-mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: flex-start;
+  width: fit-content;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid rgba(83, 112, 76, .24);
+  border-radius: 999px;
+  background: rgba(255, 249, 223, .62);
+}
+.fridge-mode-toggle button {
+  min-height: 28px;
+  min-width: 72px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #67835c;
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 800;
+  padding: 4px 12px;
+}
+.fridge-mode-toggle button.is-active {
+  background: rgba(127, 156, 109, .88);
+  color: #fffaf0;
+  box-shadow: 0 8px 16px rgba(65, 111, 63, .12);
+}
+.fridge-visual.is-icon-mode {
+  grid-template-columns: 1fr;
+}
 /* panel header filter icon */
 .visualizer-meta {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 12px;
 }
 .visualizer-filter-button {
@@ -638,19 +671,92 @@
     opacity: .55;
     cursor: default;
 }
-/* search glass on the full inventory tile */
+/* fridge and pantry mark on the full inventory tile */
 .fridge-section.full-inventory {
     position: relative;
     align-items: center;
     text-align: center;
 }
-.full-inventory-search {
-    position: absolute;
-    left: 24px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: inline-flex;
-    color: #315438;
+.storage-combo-icon {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr .72fr;
+  align-items: end;
+  gap: 8px;
+  color: #315438;
+}
+.storage-combo-icon-tile {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  width: 58px;
+  height: 54px;
+  transform: translateY(-50%) scale(.72);
+  transform-origin: center left;
+}
+.storage-combo-icon-hero {
+  width: min(76%, 260px);
+  height: 240px;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform .28s cubic-bezier(.2, 0, 0, 1), filter .28s ease;
+}
+.storage-combo-icon-hero .storage-combo-fridge {
+  width: 132px;
+  height: 210px;
+  border-width: 5px;
+  border-radius: 24px 24px 16px 16px;
+  padding: 30px 22px;
+}
+.storage-combo-icon-hero .storage-combo-pantry {
+  width: 102px;
+  height: 168px;
+  border-width: 5px;
+  border-radius: 24px 24px 14px 14px;
+  padding: 24px 18px;
+}
+.storage-combo-fridge,
+.storage-combo-pantry {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  border: 2px solid currentColor;
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 247, .92), transparent 34%),
+    linear-gradient(145deg, rgba(255, 252, 239, .96), rgba(220, 233, 200, .82));
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .7), 0 8px 18px rgba(49, 84, 56, .12);
+}
+.storage-combo-fridge {
+  width: 34px;
+  height: 52px;
+  border-radius: 8px 8px 6px 6px;
+  padding: 9px 7px;
+}
+.storage-combo-pantry {
+  width: 31px;
+  height: 42px;
+  border-radius: 9px 9px 5px 5px;
+  padding: 8px 6px;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 247, .92), transparent 36%),
+    linear-gradient(145deg, rgba(255, 249, 223, .96), rgba(239, 189, 72, .54));
+  transform: rotate(2deg);
+}
+.storage-combo-fridge > span,
+.storage-combo-pantry > span {
+  display: block;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .62;
+}
+.storage-combo-fridge > span:nth-child(2) {
+  height: 2px;
+}
+.storage-combo-fridge > span:nth-child(3) {
+  height: 12px;
+  width: 4px;
+  justify-self: end;
+  opacity: .42;
 }
 .fridge-section {
   min-height: 96px;
@@ -684,6 +790,18 @@
   background: linear-gradient(145deg, rgba(255, 250, 232, .96), rgba(232, 117, 47, .14));
   align-items: center;
   text-align: center;
+  padding-left: 92px;
+}
+.visual-inventory-entry {
+  min-height: 260px;
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 16%, rgba(239, 189, 72, .20), transparent 26%),
+    linear-gradient(145deg, rgba(255, 250, 232, .96), rgba(220, 233, 200, .82));
+}
+.visual-inventory-entry:hover .storage-combo-icon-hero {
+  transform: scale(1.035) rotate(-1deg);
+  filter: saturate(1.06);
 }
 .alert-panel {
   display: flex;
@@ -1186,7 +1304,119 @@
     opacity: .55;
     cursor: default;
 }
-.inventory-modal { width: min(900px, 100%); }
+.inventory-stage-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  padding: clamp(22px, 5vw, 64px);
+  background:
+    radial-gradient(circle at 18% 26%, rgba(239, 189, 72, .20), transparent 30%),
+    rgba(31, 39, 29, .64);
+  backdrop-filter: blur(12px) saturate(.9);
+  animation: inventoryBackdropIn .22s ease both;
+}
+.inventory-stage {
+  min-height: calc(100vh - clamp(44px, 10vw, 128px));
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: grid;
+  align-items: center;
+  gap: clamp(28px, 6vw, 72px);
+}
+.inventory-stage.has-visualizer {
+  grid-template-columns: minmax(240px, .7fr) minmax(0, 1.3fr);
+}
+.inventory-stage.is-list-only {
+  width: min(860px, 100%);
+  grid-template-columns: 1fr;
+}
+.inventory-stage.is-list-only .inventory-stage-content {
+  width: 100%;
+  justify-self: center;
+}
+.inventory-stage-visual {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  color: #f9f3d7;
+  pointer-events: none;
+}
+.storage-combo-icon-expanded {
+  width: min(34vw, 320px);
+  height: min(42vw, 360px);
+  transform-origin: left center;
+  animation: storageComboExpand .44s cubic-bezier(.2, 0, 0, 1) both;
+  filter: drop-shadow(0 32px 44px rgba(10, 16, 10, .34));
+}
+.storage-combo-icon-expanded .storage-combo-fridge {
+  width: min(18vw, 168px);
+  height: min(34vw, 310px);
+  border-width: 5px;
+  border-radius: 28px 28px 18px 18px;
+  padding: clamp(24px, 4vw, 42px) clamp(18px, 3vw, 30px);
+}
+.storage-combo-icon-expanded .storage-combo-pantry {
+  width: min(14vw, 132px);
+  height: min(27vw, 245px);
+  border-width: 5px;
+  border-radius: 28px 28px 16px 16px;
+  padding: clamp(20px, 3vw, 34px) clamp(16px, 2vw, 24px);
+}
+.inventory-stage-content {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  min-width: 0;
+  max-height: calc(100vh - 96px);
+}
+.inventory-stage-content > .section-heading,
+.inventory-stage-content > .inventory-search,
+.inventory-stage-content > .inventory-filters,
+.inventory-stage-content > .empty-state {
+  animation: inventoryCardIn .34s cubic-bezier(.2, 0, 0, 1) both;
+}
+.inventory-stage-content > .section-heading {
+  margin: 0;
+  color: #fff8df;
+  animation-delay: .10s;
+}
+.inventory-stage-content > .section-heading h2,
+.inventory-stage-content > .section-heading .eyebrow {
+  color: inherit;
+}
+.inventory-stage-content > .inventory-search {
+  animation-delay: .16s;
+}
+.inventory-stage-content > .inventory-filters,
+.inventory-stage-content > .empty-state {
+  animation-delay: .20s;
+}
+.inventory-stage-content .item-list {
+  max-height: min(58vh, 600px);
+  overflow: auto;
+  padding: 2px 10px 8px 2px;
+}
+.inventory-stage-content .item-card {
+  animation: inventoryCardIn .38s cubic-bezier(.2, 0, 0, 1) both;
+}
+.inventory-stage-content .item-card:nth-child(1) { animation-delay: .18s; }
+.inventory-stage-content .item-card:nth-child(2) { animation-delay: .23s; }
+.inventory-stage-content .item-card:nth-child(3) { animation-delay: .28s; }
+.inventory-stage-content .item-card:nth-child(4) { animation-delay: .33s; }
+.inventory-stage-content .item-card:nth-child(5) { animation-delay: .38s; }
+.inventory-stage-content .item-card:nth-child(6) { animation-delay: .43s; }
+.inventory-stage-content .item-card:nth-child(7) { animation-delay: .48s; }
+.inventory-stage-content .item-card:nth-child(8) { animation-delay: .53s; }
+.inventory-stage-content .item-card:nth-child(n+9) { animation-delay: .58s; }
+.inventory-stage-close {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  z-index: 2;
+}
+.inventory-modal { width: min(1120px, 100%); }
 .add-food-modal { width: min(720px, 100%); }
 .confirm-panel { width: min(360px, calc(100vw - 40px)); display: grid; gap: 14px; }
 .mode-switch { display: flex; gap: 18px; border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
@@ -1935,3 +2165,90 @@
     visibility: visible;
 }
 .tooltip-wrap > .usage-suggestion-button { width: 100%; }
+
+@keyframes inventoryBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes storageComboExpand {
+  from {
+    opacity: .24;
+    transform: translateX(-32px) scale(.32);
+  }
+  64% {
+    opacity: 1;
+    transform: translateX(0) scale(1.035);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes inventoryCardIn {
+  from {
+    opacity: 0;
+    transform: translateX(22px) scale(.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-stage-backdrop,
+  .storage-combo-icon-expanded,
+  .inventory-stage-content > .section-heading,
+  .inventory-stage-content > .inventory-search,
+  .inventory-stage-content > .inventory-filters,
+  .inventory-stage-content > .empty-state,
+  .inventory-stage-content .item-card {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .inventory-stage-backdrop {
+    padding: 18px;
+  }
+  .inventory-stage {
+    min-height: calc(100vh - 36px);
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+  }
+  .inventory-stage-visual {
+    justify-items: start;
+  }
+  .storage-combo-icon-expanded {
+    width: 142px;
+    height: 154px;
+  }
+  .storage-combo-icon-expanded .storage-combo-fridge {
+    width: 80px;
+    height: 142px;
+    border-width: 4px;
+    border-radius: 20px 20px 14px 14px;
+    padding: 20px 15px;
+  }
+  .storage-combo-icon-expanded .storage-combo-pantry {
+    width: 66px;
+    height: 112px;
+    border-width: 4px;
+    border-radius: 20px 20px 12px 12px;
+    padding: 16px 12px;
+  }
+  .inventory-stage-content {
+    max-height: none;
+  }
+  .inventory-stage-content .item-list {
+    max-height: none;
+    overflow: visible;
+  }
+  .inventory-stage-close {
+    top: 0;
+    right: 0;
+  }
+}
