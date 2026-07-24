@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const pool = require('../db');         
@@ -9,10 +10,14 @@ const router = express.Router();
 // import middleware
 const authenticateToken = require('../middleware/auth');
 
+function householdCode() {
+    return crypto.randomBytes(5).toString('hex').toUpperCase();
+}
+
 router.get('/me', authenticateToken, async (req, res) => {
     try {
         const userRes = await pool.query(
-            'SELECT id, email, display_name FROM users WHERE id = $1',
+            'SELECT id, email, display_name, profile_picture_url FROM users WHERE id = $1',
             [req.user.userId]
         );
         
@@ -78,8 +83,8 @@ router.post('/signup', async (req, res) => {
         const user = userRes.rows[0]; // does not contain password
 
         const householdRes = await client.query(
-            `INSERT INTO households (name) VALUES ($1) RETURNING id`,
-            [`${display_name}'s Household`]
+            `INSERT INTO households (name, code) VALUES ($1, $2) RETURNING id`,
+            [`${display_name}'s Household`, householdCode()]
         );
         const householdId = householdRes.rows[0].id;
 

@@ -17,6 +17,7 @@ const recipesRoutes = require('./routes/recipes');
 const brandProductsRoutes = require('./routes/brandProducts');
 const fridgesRoutes = require('./routes/fridges');
 const storageSectionsRoutes = require('./routes/storageSections');
+const householdsRoutes = require('./routes/households');
 
 // note: Middleware = a function that runs on every incoming request before it reaches the route
 // make cors origin configurable via env var, default to localhost:5173 for dev
@@ -32,6 +33,7 @@ app.use('/api/v1/recipes', recipesRoutes);
 app.use('/api/v1/brand-products', brandProductsRoutes);
 app.use('/api/v1/fridges', fridgesRoutes);
 app.use('/api/v1/storage-sections', storageSectionsRoutes);
+app.use('/api/v1/households', householdsRoutes);
 
 // sample route
 app.get('/api/v1/health', (req, res) => {           

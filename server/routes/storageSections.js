@@ -2,7 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const pool = require('../db');
 const reqAuth = require('../middleware/auth');
-const { getHouseholdId } = require('../helpers/household');
+const { requireHouseholdId } = require('../helpers/household');
 const { storageFromSection } = require('../helpers/storage');
 
 const router = express.Router();
@@ -24,7 +24,8 @@ router.patch('/:id', async (req, res) => {
     const { name, section_type, has_door_space } = parsed.data;
     const client = await pool.connect();
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         await client.query('BEGIN');
 
         const sectionRes = await client.query(
