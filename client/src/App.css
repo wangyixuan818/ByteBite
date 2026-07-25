@@ -645,6 +645,130 @@
   font-size: 1.2rem;
   line-height: 1;
 }
+.dashboard-empty-panel {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+.fridge-setup-panel {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(190px, .55fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+.fridge-setup-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto -44px -54px auto;
+  width: 190px;
+  height: 190px;
+  border-radius: 48% 52% 45% 55% / 52% 46% 54% 48%;
+  background: rgba(239, 189, 72, .18);
+  pointer-events: none;
+}
+.fridge-setup-art {
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  border-radius: 42% 58% 54% 46% / 52% 46% 54% 48%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 247, .92), transparent 40%),
+    rgba(220, 233, 200, .52);
+}
+.fridge-setup-art .storage-combo-icon-hero {
+  width: min(92%, 230px);
+  height: 220px;
+}
+.fridge-setup-copy,
+.fridge-setup-join {
+  position: relative;
+  z-index: 1;
+}
+.fridge-setup-copy h2 {
+  margin-bottom: 12px;
+  color: #587f4e;
+  font-family: "Londrina Solid", "Trebuchet MS", "Segoe UI Rounded", system-ui, sans-serif;
+  font-size: clamp(2.8rem, 6vw, 4.8rem);
+  line-height: .92;
+}
+.fridge-setup-copy p:not(.eyebrow),
+.fridge-setup-join {
+  color: #5f7d55;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.48;
+}
+.fridge-setup-copy .button-row {
+  margin-top: 22px;
+}
+.fridge-setup-join {
+  grid-column: 2;
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .62);
+  padding: 14px;
+}
+.fridge-setup-join label {
+  color: #315438;
+  font-weight: 800;
+}
+.initialize-fridge-modal {
+  width: min(660px, 100%);
+}
+.fridge-model-picker {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.fridge-model-picker legend {
+  margin-bottom: 8px;
+  color: #315438;
+  font-weight: 800;
+}
+.fridge-model-picker > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.fridge-model-picker label {
+  min-height: 84px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+  border: 1px solid rgba(83, 112, 76, .22);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .70);
+  padding: 12px;
+  cursor: pointer;
+}
+.fridge-model-picker label.is-selected {
+  border-color: rgba(232, 117, 47, .42);
+  background:
+    radial-gradient(circle at 92% 14%, rgba(239, 189, 72, .20), transparent 30%),
+    rgba(255, 247, 232, .92);
+}
+.fridge-model-picker input {
+  width: auto;
+  min-height: auto;
+  margin-top: 3px;
+}
+.fridge-model-picker strong,
+.fridge-model-picker small {
+  display: block;
+}
+.fridge-model-picker strong {
+  color: #315438;
+}
+.fridge-model-picker small {
+  margin-top: 4px;
+  color: #67835c;
+  line-height: 1.35;
+}
 .fridge-panel { display: flex; flex-direction: column; gap: 16px; }
 .fridge-visual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .fridge-mode-toggle {

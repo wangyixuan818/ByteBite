@@ -4,11 +4,14 @@ import { Minus, Plus } from 'lucide-react';
 import { useAuthentication } from '../context/AuthenticationContext';
 import { getItemList, updateItem } from '../api/item';
 import { getNotifications, updateNotification } from '../api/notification';
+import { getFridges, initializeFridge } from '../api/fridge';
+import { getHouseholds, joinHousehold } from '../api/household';
 import { AddItemForm } from '../components/AddItemForm';
 import ItemList from '../components/ItemList';
 import NotificationInbox from '../components/NotificationInbox';
 import BrandTitle from '../components/BrandTitle';
 import { searchByName } from '../utils/text';
+import { getCurrentHouseholdId, setCurrentHouseholdId } from '../utils/currentHousehold';
 
 const EXPIRY_STATUSES = new Set([
     'expired',
@@ -30,6 +33,13 @@ const EXPIRY_FILTERS = [
     { id: 'expiring', label: 'Expiring soon', statuses: ['expiring_today', 'expiring_soon', 'expiring_this_week'] },
     { id: 'fresh', label: 'Fresh', statuses: ['ok'] },
     { id: 'no_date', label: 'No date', statuses: ['no_date'] },
+];
+
+const FRIDGE_MODELS = [
+    { id: 'two_layered', label: 'Two layered', detail: 'Freezer on top, fridge below' },
+    { id: 'three_layered', label: 'Three layered', detail: 'Fridge, fresh zone, and freezer' },
+    { id: 'mini', label: 'Mini fridge', detail: 'One compact fridge section' },
+    { id: 'side_by_side', label: 'Side by side', detail: 'Freezer and fridge doors side by side' },
 ];
 
 function StorageComboIcon({ className = '' }) {
@@ -69,6 +79,7 @@ export default function Dashboard() {
     const { user, logout } = useAuthentication();
     const navigate = useNavigate();
     const [itemList, setItemList] = useState([]);
+    const [fridges, setFridges] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -88,6 +99,11 @@ export default function Dashboard() {
     const [usedQuantity, setUsedQuantity] = useState(1);
     const [useError, setUseError] = useState('');
     const [message, setMessage] = useState('');
+    const [setupBusy, setSetupBusy] = useState(false);
+    const [joinCode, setJoinCode] = useState('');
+    const [showInitializeFridge, setShowInitializeFridge] = useState(false);
+    const [fridgeName, setFridgeName] = useState('Home fridge');
+    const [fridgeModel, setFridgeModel] = useState('two_layered');
     const notificationSnoozeKey = useMemo(() => getNotificationSnoozeKey(user?.id), [user?.id]);
     const [dismissedNotificationKey, setDismissedNotificationKey] = useState(() => {
         const initialKey = getNotificationSnoozeKey(user?.id);
@@ -134,6 +150,7 @@ export default function Dashboard() {
     );
 
     const activeFilterCount = expiryFilter.size + storageFilter.size;
+    const hasFridge = fridges.length > 0;
 
     const toggleInSet = (setter, value) => {
         setter(current => {
@@ -174,7 +191,53 @@ export default function Dashboard() {
 
     const countItemsInSection = (section) => itemList.filter(item => section.storageValues.includes(item.storage)).length;
 
+    const ensureCurrentHousehold = async () => {
+        const storedHouseholdId = getCurrentHouseholdId();
+        if (storedHouseholdId) return storedHouseholdId;
+
+        const householdRes = await getHouseholds();
+        const firstHouseholdId = householdRes.data.households?.[0]?.id ?? null;
+        if (firstHouseholdId) setCurrentHouseholdId(firstHouseholdId);
+        return firstHouseholdId;
+    };
+
+    const loadDashboardData = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const householdId = await ensureCurrentHousehold();
+            if (!householdId) {
+                setFridges([]);
+                setItemList([]);
+                setNotifications([]);
+                return;
+            }
+
+            const fridgeRes = await getFridges();
+            const nextFridges = fridgeRes.data ?? [];
+            setFridges(nextFridges);
+
+            if (nextFridges.length === 0) {
+                setItemList([]);
+                setNotifications([]);
+                return;
+            }
+
+            const [itemRes, notificationRes] = await Promise.all([
+                getItemList({ sort: 'expiry_asc' }),
+                getNotifications(),
+            ]);
+            setItemList(itemRes.data);
+            setNotifications(notificationRes.data);
+        } catch {
+            setError('Failed to load dashboard. Check that the server is running, then try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const fetchItems = async () => {
+        if (!hasFridge) return;
         setLoading(true);
         setError('');
         try {
@@ -188,6 +251,7 @@ export default function Dashboard() {
     };
 
     const fetchNotifications = async () => {
+        if (!hasFridge) return;
         try {
             const res = await getNotifications();
             setNotifications(res.data);
@@ -197,14 +261,42 @@ export default function Dashboard() {
     };
 
     useEffect(() => {
-        getItemList({ sort: 'expiry_asc' })
-            .then(res => setItemList(res.data))
-            .catch(() => setError('Failed to get items. Check that the server is running, then try again.'))
-            .finally(() => setLoading(false));
+        let ignore = false;
 
-        getNotifications()
-            .then(res => setNotifications(res.data))
-            .catch(() => setError('Failed to get notifications. Check that the server is running, then try again.'));
+        ensureCurrentHousehold()
+            .then(householdId => {
+                if (!householdId) return { fridges: [], items: [], notifications: [] };
+                return getFridges().then(fridgeRes => {
+                    const nextFridges = fridgeRes.data ?? [];
+                    if (nextFridges.length === 0) {
+                        return { fridges: nextFridges, items: [], notifications: [] };
+                    }
+                    return Promise.all([
+                        getItemList({ sort: 'expiry_asc' }),
+                        getNotifications(),
+                    ]).then(([itemRes, notificationRes]) => ({
+                        fridges: nextFridges,
+                        items: itemRes.data,
+                        notifications: notificationRes.data,
+                    }));
+                });
+            })
+            .then(data => {
+                if (ignore) return;
+                setFridges(data.fridges);
+                setItemList(data.items);
+                setNotifications(data.notifications);
+            })
+            .catch(() => {
+                if (!ignore) setError('Failed to load dashboard. Check that the server is running, then try again.');
+            })
+            .finally(() => {
+                if (!ignore) setLoading(false);
+            });
+
+        return () => {
+            ignore = true;
+        };
     }, []);
 
     const showTemporaryMessage = (text) => {
@@ -213,6 +305,10 @@ export default function Dashboard() {
     };
 
     const openAddForm = () => {
+        if (!hasFridge) {
+            setShowInitializeFridge(true);
+            return;
+        }
         setEditingItem(null);
         setShowForm(true);
     };
@@ -327,6 +423,44 @@ export default function Dashboard() {
         setDismissedNotificationKey(notificationSnoozeKey);
     };
 
+    const handleInitializeFridge = async (event) => {
+        event.preventDefault();
+        if (!fridgeName.trim()) return;
+        setSetupBusy(true);
+        setError('');
+        try {
+            await initializeFridge({
+                name: fridgeName.trim(),
+                model_type: fridgeModel,
+            });
+            setShowInitializeFridge(false);
+            showTemporaryMessage('Fridge initialized. Your household is ready.');
+            await loadDashboardData();
+        } catch (err) {
+            setError(err.response?.data?.error?.message || 'Could not initialize this fridge.');
+        } finally {
+            setSetupBusy(false);
+        }
+    };
+
+    const handleJoinHousehold = async (event) => {
+        event.preventDefault();
+        if (!joinCode.trim()) return;
+        setSetupBusy(true);
+        setError('');
+        try {
+            const res = await joinHousehold(joinCode.trim());
+            setCurrentHouseholdId(res.data.household.id);
+            setJoinCode('');
+            showTemporaryMessage(`Joined ${res.data.household.name}.`);
+            await loadDashboardData();
+        } catch (err) {
+            setError(err.response?.data?.error?.message || 'That household code did not work.');
+        } finally {
+            setSetupBusy(false);
+        }
+    };
+
     return (
         <main className="page-shell dashboard-page">
             <nav className="topbar">
@@ -346,13 +480,43 @@ export default function Dashboard() {
                 <div><p className="eyebrow">Dashboard</p><h1>Your fridge</h1></div>
                 <div className="button-row">
                     <button className="button secondary" onClick={() => navigate('/dashboard/recipes')}>Recipe Library</button>
-                    <button className="button" onClick={openAddForm}>+ Add item</button>
+                    {hasFridge && <button className="button" onClick={openAddForm}>+ Add item</button>}
                 </div>
             </header>
 
             {message && <p className="message success" role="status">{message}</p>}
             {error && <p className="message error" role="alert">{error}</p>}
 
+            {loading ? (
+                <p className="panel empty-state dashboard-empty-panel">Loading dashboard...</p>
+            ) : !hasFridge ? (
+                <section className="panel fridge-setup-panel" aria-labelledby="fridge-setup-title">
+                    <div className="fridge-setup-art" aria-hidden="true">
+                        <StorageComboIcon className="storage-combo-icon-hero" />
+                    </div>
+                    <div className="fridge-setup-copy">
+                        <p className="eyebrow">Household setup</p>
+                        <h2 id="fridge-setup-title">Set up a fridge first</h2>
+                        <p>This household does not have a fridge yet, so ByteBite is hiding inventory and expiry alerts until there is somewhere to store food.</p>
+                        <div className="button-row">
+                            <button className="button" type="button" onClick={() => setShowInitializeFridge(true)}>Initialize new fridge</button>
+                            <button className="button secondary" type="button" onClick={() => navigate('/dashboard/profile')}>Manage households</button>
+                        </div>
+                    </div>
+                    <form className="fridge-setup-join" onSubmit={handleJoinHousehold}>
+                        <label htmlFor="dashboard-join-code">Join an existing household</label>
+                        <div className="household-inline-control">
+                            <input
+                                id="dashboard-join-code"
+                                value={joinCode}
+                                onChange={event => setJoinCode(event.target.value.toUpperCase())}
+                                placeholder="AB12CD34EF"
+                            />
+                            <button className="button secondary" type="submit" disabled={setupBusy || !joinCode.trim()}>Join</button>
+                        </div>
+                    </form>
+                </section>
+            ) : (
             <section className="dashboard-grid">
                 <section className="panel fridge-panel" aria-labelledby="fridge-visual-title">
                     <div className="section-heading">
@@ -436,8 +600,9 @@ export default function Dashboard() {
                     onViewItem={openFocusedItem}
                 />
             </section>
+            )}
 
-            {showNotificationPopup && (
+            {hasFridge && showNotificationPopup && (
                 <div className="modal-backdrop notification-popup-backdrop" role="presentation">
                     <section className="modal panel notification-popup" role="dialog" aria-modal="true" aria-labelledby="notification-popup-title">
                         <div className="notification-popup-art" aria-hidden="true">
@@ -475,7 +640,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {activeInventoryView && (
+            {hasFridge && activeInventoryView && (
                 <div className="inventory-stage-backdrop" role="presentation" onMouseDown={ closeInventory }>
                     <section className={`inventory-stage inventory-modal ${inventoryOverlayKind === 'visual' ? 'has-visualizer' : 'is-list-only'}`} role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" onMouseDown={event => event.stopPropagation()}>
                         {inventoryOverlayKind === 'visual' && (
@@ -665,7 +830,53 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {showForm && (
+            {showInitializeFridge && (
+                <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowInitializeFridge(false)}>
+                    <section className="modal panel initialize-fridge-modal" role="dialog" aria-modal="true" aria-labelledby="initialize-fridge-title" onMouseDown={event => event.stopPropagation()}>
+                        <form className="form-stack" onSubmit={handleInitializeFridge}>
+                            <div className="section-heading">
+                                <div>
+                                    <p className="eyebrow">Household fridge</p>
+                                    <h2 id="initialize-fridge-title">Initialize fridge</h2>
+                                </div>
+                                <button className="icon-button" type="button" aria-label="Close" onClick={() => setShowInitializeFridge(false)}>x</button>
+                            </div>
+                            <label>
+                                Fridge name
+                                <input value={fridgeName} onChange={event => setFridgeName(event.target.value)} required autoFocus />
+                            </label>
+                            <fieldset className="fridge-model-picker">
+                                <legend>Fridge type</legend>
+                                <div>
+                                    {FRIDGE_MODELS.map(model => (
+                                        <label key={model.id} className={fridgeModel === model.id ? 'is-selected' : ''}>
+                                            <input
+                                                type="radio"
+                                                name="fridge-model"
+                                                value={model.id}
+                                                checked={fridgeModel === model.id}
+                                                onChange={event => setFridgeModel(event.target.value)}
+                                            />
+                                            <span>
+                                                <strong>{model.label}</strong>
+                                                <small>{model.detail}</small>
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </fieldset>
+                            <div className="button-row">
+                                <button className="button" type="submit" disabled={setupBusy || !fridgeName.trim()}>
+                                    {setupBusy ? 'Initializing...' : 'Initialize fridge'}
+                                </button>
+                                <button className="button secondary" type="button" onClick={() => setShowInitializeFridge(false)}>Cancel</button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
+
+            {hasFridge && showForm && (
                 <div className="modal-backdrop" role="presentation" onMouseDown={closeForm}>
                     <section className="modal panel add-food-modal" role="dialog" aria-modal="true" aria-labelledby="add-item-title" onMouseDown={event => event.stopPropagation()}>
                         <div className="section-heading">
