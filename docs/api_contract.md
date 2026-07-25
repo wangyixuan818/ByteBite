@@ -34,8 +34,63 @@ For pure-JWT, the client just discards the token; this endpoint exists for symme
 
 ### GET /auth/me  (auth required)
 
-- 200: `{ "user": { "id", "email", "display_name" } }`
+- 200: `{ "user": { "id", "email", "display_name", "profile_picture_url" } }`
 - Errors: 401 `UNAUTHENTICATED`
+
+## Households  (auth required)
+
+Household membership is the access boundary for fridge data. A user can belong to multiple households, and every fridge belongs to one household.
+
+### GET /households
+
+List all households the current user belongs to, including household codes and members.
+
+- 200: `{ "households": [ <household>, ... ] }`
+
+### POST /households
+
+Create a new household and add the current user as a member.
+
+- Request: `{ "name": string }`
+- 201: `{ "household": <household> }`
+- Errors: 400 `VALIDATION_ERROR`
+
+### POST /households/join
+
+Join a household by code. No approval flow is required.
+
+- Request: `{ "code": string }`
+- 200: `{ "household": <household> }`
+- Errors: 400 `VALIDATION_ERROR`, 404 `INVALID_HOUSEHOLD_CODE`
+
+### PATCH /households/:id
+
+Rename a household. Any household member can rename it.
+
+- Request: `{ "name": string }`
+- 200: `{ "household": <household> }`
+- Errors: 400 `VALIDATION_ERROR`, 403 `HOUSEHOLD_FORBIDDEN`
+
+### GET /households/:id/members
+
+List members of a household the current user belongs to.
+
+- 200: `{ "members": [ <user>, ... ] }`
+- Errors: 403 `HOUSEHOLD_FORBIDDEN`
+
+### POST /households/:id/regenerate-code
+
+Regenerate the join code for a household. Any household member can do this.
+
+- 200: `{ "household": <household> }`
+- Errors: 403 `HOUSEHOLD_FORBIDDEN`
+
+### DELETE /households/:id/members/me
+
+Leave a household.
+
+- 204 No Content
+- Errors: 403 `HOUSEHOLD_FORBIDDEN`, 409 `LAST_HOUSEHOLD_MEMBER`
 
 ## Catalog  (reference data for add-item flow, auto-expiry, and filtering)
 
@@ -97,11 +152,117 @@ List brand variants visible to the caller: public entries plus the household's o
 - 200: `[ <brand_product>, ... ]`
 
 
+## Fridge Setup  (scoped to selected household)
+
+Fridge setup stores a household's chosen fridge model and its customizable storage sections. Pantry is not part of a fridge model, but the backend always creates or reuses one pantry section for the household.
+
+For multi-household users, fridge reads/updates can pass `?household_id=N`. Fridge creation can pass `"household_id": N` in the request body. If omitted, the backend falls back to the user's first household for backwards compatibility.
+
+Supported `model_type` values:
+
+- `two_layered`
+- `three_layered`
+- `mini`
+- `side_by_side`
+
+Supported `section_type` values:
+
+- `fridge`
+- `freezer`
+- `fresh_zone`
+- `pantry`
+
+### GET /fridges  (auth required)
+
+List fridges in the household. Each fridge includes its own sections plus the household pantry section if it exists.
+
+- Optional query param: `?household_id=N`
+- 200: `[ <fridge>, ... ]`
+
+### GET /fridges/:id  (auth required)
+
+Get one fridge and its sections.
+
+- Optional query param: `?household_id=N`
+- 200: `{ "fridge": <fridge> }`
+- Errors: 404 `NOT_FOUND`
+
+### POST /fridges/initialize  (auth required)
+
+Create a fridge from a model, create its sections, create/reuse the pantry section, and auto-map existing items where possible.
+
+If `sections` is omitted, backend uses the default sections for the selected model. If `sections` is provided, it represents the user's customized section choices.
+
+Fridge model sections may use `fridge`, `freezer`, or `fresh_zone`. Pantry is created separately by the backend.
+
+- Request:
+```json
+{
+  "name": "Home fridge",
+  "household_id": 1,
+  "model_type": "three_layered",
+  "sections": [
+    {
+      "section_key": "upper",
+      "name": "Upper fridge",
+      "section_type": "fridge",
+      "has_door_space": true
+    },
+    {
+      "section_key": "middle",
+      "name": "Middle fresh zone",
+      "section_type": "fresh_zone",
+      "has_door_space": false
+    },
+    {
+      "section_key": "lower",
+      "name": "Lower freezer",
+      "section_type": "freezer",
+      "has_door_space": false
+    }
+  ]
+}
+```
+
+- 201: `{ "fridge": <fridge>, "mapped_items_count": number }`
+- Errors: 400 `VALIDATION_ERROR`, 409 `FRIDGE_ALREADY_EXISTS`
+
+Existing item auto-mapping:
+
+- `storage = "fridge"` -> first `fridge` section
+- `storage = "freezer"` -> first `freezer` section
+- `storage = "fresh zone"` -> first `fresh_zone` section, otherwise first `fridge` section
+- `storage = "fridge door"` -> first `fridge` section with `is_in_door = true`
+- `storage = "pantry"` -> pantry section
+
+If no matching section exists, the item keeps its old `storage` value and remains without `storage_section_id`.
+
+### PATCH /fridges/:id  (auth required)
+
+Rename a fridge.
+
+- Optional query param: `?household_id=N`
+- Request: `{ "name": string }`
+- 200: `{ "fridge": <fridge> }`
+- Errors: 400 `VALIDATION_ERROR`, 404 `NOT_FOUND`
+
+### PATCH /storage-sections/:id  (auth required)
+
+Update a storage section's label, type, or door setting. Existing items in that section have their broad `storage` value refreshed to match the new `section_type`.
+
+- Optional query param: `?household_id=N`
+- Request: `{ "name"?: string, "section_type"?: "fridge" | "freezer" | "fresh_zone" | "pantry", "has_door_space"?: boolean }`
+- 200: `{ "storage_section": <storage_section> }`
+- Errors: 400 `VALIDATION_ERROR`, 404 `NOT_FOUND`
+
+
 ## Food Items  (scoped to current user's household)
 
 ### GET /items  (auth required)
 
 List active items in the user's household, sorted by expiry date (soonest first, items without an expiry date last). Items whose `status` is not `active` (`consumed`, `disposed`, `removed`) are excluded from this view but kept in the database for analytics.
+
+For multi-household users, pass `?household_id=N`. Item create/update can also pass `"household_id": N` in the request body. If omitted, the backend falls back to the user's first household for backwards compatibility.
 
 Each item is returned with server-computed expiry fields to support the frontend's "expiring soon" highlighting:
 - `days_until_expiry`: signed integer number of days from today to the item's `expiry_date`. Negative for items already past expiry, zero for today, `null` when `expiry_date` is `null`.
@@ -126,9 +287,11 @@ Each item is returned with server-computed expiry fields to support the frontend
 
 Add an item. If `expiry_date` is omitted, the server runs a **cascading auto-expiry lookup** across the catalog hierarchy: it tries the brand_products tier first (most specific), then falls back to food_types (product), then to categories (most general). On any match it computes `expiry_date = added_date + shelf_life_days` (picking the right `pantry_days` / `fridge_days` / `freezer_days` based on `storage`) and sets `expiry_is_estimated=true`. On no match, `expiry_date` stays null. If `storage` is omitted, the server fills it in from the matched catalog row's `default_storage`. The matched `brand_product_id` and/or `food_type_id` are persisted on the item.
 
+When `storage_section_id` is provided, the backend verifies the section belongs to the user's household and derives `fridge_id` and broad `storage` from that section. `is_in_door=true` is allowed only when the section has `has_door_space=true`.
+
 Brand handling runs before the expiry cascade. If `brand` is supplied as free text together with a `food_type_id` and no `brand_product_id`, the server matches it against brands visible to the household and creates a new private brand when there is no match, so a typed brand is never discarded even when `expiry_date` is also provided. A `brand_product_id` belonging to another household is rejected and stored as null.
 
-- Request: `{ "name": string, "food_type_id"?: number, "brand_product_id"?: number, "category_id"?: number, "brand"?: string, "quantity"?: number, "unit"?: string, "added_date"?: ISO date, "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone" }`
+- Request: `{ "household_id"?: number, "name": string, "food_type_id"?: number, "brand_product_id"?: number, "category_id"?: number, "brand"?: string, "quantity"?: number, "unit"?: string, "added_date"?: ISO date, "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone", "storage_section_id"?: number, "is_in_door"?: boolean }`
 - 201: `{ "item": <item> }`
 - Errors: 400 `VALIDATION_ERROR`
 
@@ -141,7 +304,7 @@ Brand handling runs before the expiry cascade. If `brand` is supplied as free te
 
 Update any subset of item fields. This endpoint is also used to mark an item as consumed, disposed, or removed.
 
-- Request: `{ "name"?: string, "food_type_id"?: number, "brand_product_id"?: number, "quantity"?: number, "unit"?: string, "added_date"?: ISO date, "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone", "status"?: "active" | "consumed" | "disposed" | "removed" }`
+- Request: `{ "household_id"?: number, "name"?: string, "food_type_id"?: number, "brand_product_id"?: number | null, "quantity"?: number, "unit"?: string, "added_date"?: ISO date, "expiry_date"?: ISO date, "storage"?: "fridge" | "freezer" | "pantry" | "fridge door" | "fresh zone", "storage_section_id"?: number | null, "is_in_door"?: boolean, "status"?: "active" | "consumed" | "disposed" | "removed" }`
 - 200: `{ "item": <item> }`
 - Errors: 400 `VALIDATION_ERROR`, 404 `NOT_FOUND`
 
@@ -192,6 +355,8 @@ Get one recipe with required food type IDs.
 {
   "id": 42,
   "household_id": 1,
+  "fridge_id": 2,
+  "storage_section_id": 8,
   "name": "HL Milk",
   "food_type_id": 12,
   "brand_product_id": 5,
@@ -208,6 +373,7 @@ Get one recipe with required food type IDs.
   "disposed_at": null,
   "removed_at": null,
   "storage": "fridge",
+  "is_in_door": false,
   "created_by": 3,
   "created_at": "2026-05-20T08:30:00Z",
   "updated_at": "2026-05-20T08:30:00Z",
@@ -218,6 +384,70 @@ Get one recipe with required food type IDs.
 ```
 
 brand_product_id, food_type_id, and category_id are the catalog rows that matched the user's input via the auto-expiry cascade. Any of them may be null if the cascade didn't find a match at that tier. Persisting all three makes future features (filter by brand, filter by category, brand-specific analytics) possible without joins.
+
+`fridge_id` and `storage_section_id` may be null for legacy/unassigned items. Prefer `storage_section_id` for fridge UI placement and fall back to `storage` when it is null.
+
+## The `<fridge>` object
+
+```json
+{
+  "id": 2,
+  "household_id": 1,
+  "name": "Home fridge",
+  "model_type": "three_layered",
+  "created_by": 3,
+  "created_at": "2026-07-23T08:30:00Z",
+  "updated_at": "2026-07-23T08:30:00Z",
+  "sections": [
+    {
+      "id": 8,
+      "household_id": 1,
+      "fridge_id": 2,
+      "name": "Upper fridge",
+      "section_type": "fridge",
+      "section_key": "upper",
+      "position": 0,
+      "has_door_space": true
+    }
+  ]
+}
+```
+
+## The `<household>` object
+
+```json
+{
+  "id": 1,
+  "name": "Dinner Club",
+  "code": "A1B2C3D4E5",
+  "created_at": "2026-07-25T08:30:00Z",
+  "members": [
+    {
+      "id": 1,
+      "email": "alice@example.com",
+      "display_name": "Alice",
+      "profile_picture_url": null
+    }
+  ]
+}
+```
+
+## The `<storage_section>` object
+
+```json
+{
+  "id": 8,
+  "household_id": 1,
+  "fridge_id": 2,
+  "name": "Upper fridge",
+  "section_type": "fridge",
+  "section_key": "upper",
+  "position": 0,
+  "has_door_space": true
+}
+```
+
+For the pantry section, `fridge_id` is null and `section_type` is `pantry`.
 
 ## The `<category>` object
 ```json
