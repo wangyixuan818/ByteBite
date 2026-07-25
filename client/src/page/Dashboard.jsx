@@ -176,6 +176,12 @@ export default function Dashboard() {
             .catch(() => setError('Failed to get notifications. Check that the server is running, then try again.'));
     }, []);
 
+    useEffect(() => {
+        const refresh = () => fetchItems();
+        window.addEventListener('bytebite:item-added', refresh);
+        return () => window.removeEventListener('bytebite:item-added', refresh);
+    }, []);
+
     const showTemporaryMessage = (text) => {
         setMessage(text);
         window.setTimeout(() => setMessage(''), 3000);

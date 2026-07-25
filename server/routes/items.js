@@ -555,6 +555,83 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// shared helper for consumed/disposed actions
+async function actOnItem(req, res, targetStatus, dateColumn) {
+    // dateColumn is a hardcoded internal value ('consumed_at' | 'disposed_at'), never user input
+    const client = await pool.connect();
+    try {
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;   // requireHouseholdId already sent the 403
+        
+        const requested = req.body?.quantity;
+
+        await client.query('BEGIN');
+
+        const itemRes = await client.query(
+            `SELECT * FROM items WHERE id = $1 AND household_id = $2 AND status = 'active' FOR UPDATE`,
+            [req.params.id, householdId]
+        );
+
+        const item = itemRes.rows[0];
+
+        if (!item) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: {
+                code: 'NOT_FOUND',
+                message: 'Active item not found'
+            }});
+        }
+
+    const have = Number(item.quantity ?? 0);
+    let amount = requested == null ? have : Number(requested); 
+    if (!Number.isFinite(amount) || amount <= 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Quantity must be positive' } });
+        }
+        if (item.quantity != null && amount > have) amount = have;   // cap at what's there
+
+        const whole = item.quantity == null || amount >= have;
+
+        if (whole) {
+            await client.query(
+                `UPDATE items
+                 SET status = $1, ${dateColumn} = CURRENT_DATE, status_updated_at = now(), updated_at = now()
+                 WHERE id = $2`,
+                [targetStatus, item.id]
+            );
+        } else {
+            // reduce the original ...
+            await client.query(
+                `UPDATE items SET quantity = quantity - $1, updated_at = now() WHERE id = $2`,
+                [amount, item.id]
+            );
+            // ... and record the acted on portion as a completed ledger row
+            await client.query(
+                `INSERT INTO items
+                    (household_id, name, food_type_id, brand_product_id, category_id,
+                     initial_quantity, quantity, unit, added_date, expiry_date, expiry_is_estimated,
+                     status, ${dateColumn}, status_updated_at, storage, created_by)
+                 VALUES ($1,$2,$3,$4,$5,$6,$6,$7,$8,$9,$10,$11,CURRENT_DATE,now(),$12,$13)`,
+                [item.household_id, item.name, item.food_type_id, item.brand_product_id, item.category_id,
+                 amount, item.unit, item.added_date, item.expiry_date, item.expiry_is_estimated,
+                 targetStatus, item.storage, req.user.userId]
+            );
+        }
+
+        await client.query('COMMIT');
+        return res.status(200).json({ ok: true, whole, amount });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Something went wrong' } });
+    } finally {
+        client.release();
+    }
+}
+
+router.post('/:id/consume', (req, res) => actOnItem(req, res, 'consumed', 'consumed_at'));
+router.post('/:id/dispose', (req, res) => actOnItem(req, res, 'disposed', 'disposed_at'));
+
 module.exports = router;
 module.exports.createItemSchema = createItemSchema;
 module.exports.updateItemSchema = updateItemSchema;
