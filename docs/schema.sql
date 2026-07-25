@@ -6,6 +6,7 @@
 create table households (
   id          bigint generated always as identity primary key,
   name        text not null,
+  code        text not null unique,
   created_at  timestamptz not null default now()
 );
 
@@ -15,6 +16,7 @@ create table users (
   email         text not null unique,
   password_hash text not null,                  -- bcrypt hash so plaintext is never stored
   display_name  text not null,
+  profile_picture_url text,
   created_at    timestamptz not null default now()
 );
 

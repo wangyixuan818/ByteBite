@@ -2,7 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const pool = require('../db');
 const reqAuth = require('../middleware/auth');
-const { getHouseholdId } = require('../helpers/household');
+const { requireHouseholdId } = require('../helpers/household');
 const { storageFromSection } = require('../helpers/storage');
 
 const router = express.Router();
@@ -36,6 +36,7 @@ const sectionSchema = z.object({
 
 const initializeFridgeSchema = z.object({
     name: z.string().min(1).max(80),
+    household_id: z.number().int().positive().optional(),
     model_type: z.enum(['two_layered', 'three_layered', 'mini', 'side_by_side']),
     sections: z.array(sectionSchema).min(1).optional(),
 });
@@ -136,7 +137,8 @@ async function mapExistingItems(client, householdId, fridgeId, sections, pantryS
 
 router.get('/', async (req, res) => {
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         const fridges = await pool.query(
             `SELECT id, household_id, name, model_type, created_by, created_at, updated_at
              FROM fridges
@@ -172,7 +174,8 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         const fridge = await fetchFridge(pool, householdId, req.params.id);
         if (!fridge) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Fridge not found' } });
         return res.status(200).json({ fridge });
@@ -189,12 +192,13 @@ router.post('/initialize', async (req, res) => {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: msg } });
     }
 
-    const { name, model_type, sections: customSections } = parsed.data;
+    const { name, household_id, model_type, sections: customSections } = parsed.data;
     const sectionsToCreate = mergeWithDefaults(model_type, customSections);
     const client = await pool.connect();
 
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, household_id ?? null);
+        if (!householdId) return;
         await client.query('BEGIN');
 
         const fridgeRes = await client.query(
@@ -254,7 +258,8 @@ router.patch('/:id', async (req, res) => {
     }
 
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         const updated = await pool.query(
             `UPDATE fridges
              SET name = $1, updated_at = now()

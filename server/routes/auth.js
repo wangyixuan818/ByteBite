@@ -17,7 +17,7 @@ function householdCode() {
 router.get('/me', authenticateToken, async (req, res) => {
     try {
         const userRes = await pool.query(
-            'SELECT id, email, display_name FROM users WHERE id = $1',
+            'SELECT id, email, display_name, profile_picture_url FROM users WHERE id = $1',
             [req.user.userId]
         );
         

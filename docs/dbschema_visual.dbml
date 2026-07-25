@@ -5,6 +5,7 @@
 Table households {
   id bigint [primary key]
   name text [not null]
+  code text [not null, unique]
   created_at timestamptz [not null]
 }
 
@@ -53,6 +54,7 @@ Table users {
   email text [not null, unique]
   password_hash text [not null, note: 'bcrypt hash so plaintext is never stored']
   display_name text [not null]
+  profile_picture_url text
   created_at timestamptz [not null]
 }
 

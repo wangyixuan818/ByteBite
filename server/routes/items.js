@@ -4,7 +4,7 @@ const pool = require('../db');
 const reqAuth = require('../middleware/auth');
 const { formatDate, todayDate, addDays } = require('../helpers/date');
 const { pickDays } = require('../helpers/auto-expiry');
-const { getHouseholdId } = require('../helpers/household');
+const { requireHouseholdId } = require('../helpers/household');
 const { storageFromSection, getStorageSection } = require('../helpers/storage');
 
 const router = express.Router();
@@ -25,7 +25,8 @@ const itemSelectFields = `*,
 
 router.get('/', async (req, res) => {
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         // add a tag to denote how many days they are from expiry
         const result = await pool.query(
             `SELECT ${itemSelectFields}
@@ -48,6 +49,7 @@ router.get('/', async (req, res) => {
 });
 
 const createItemSchema = z.object({
+    household_id: z.number().int().positive().optional(),
     name: z.string().min(1),
 
     // ids
@@ -81,11 +83,12 @@ router.post('/', async (req, res) => {
 
     const { name, 
                 food_type_id, brand_product_id, category_id, brand,
-                quantity, unit, added_date, expiry_date, storage, storage_section_id, is_in_door } 
+                quantity, unit, added_date, expiry_date, storage, storage_section_id, is_in_door, household_id }
                     = parsed.data;
 
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, household_id ?? null);
+        if (!householdId) return;
 
         // let added_date fall back to current date if not provided
         const finalAddedDate = added_date ?? todayDate();
@@ -342,7 +345,8 @@ router.post('/', async (req, res) => {
 // reading items
 router.get('/:id', async (req, res) => {
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         const itemRes = await pool.query(
             `SELECT ${itemSelectFields}
              FROM items
@@ -369,6 +373,7 @@ router.get('/:id', async (req, res) => {
 
 // updating items
 const updateItemSchema = z.object({
+    household_id: z.number().int().positive().optional(),
     name: z.string().min(1).optional(),
     food_type_id: z.number().int().optional(),
     brand_product_id: z.number().int().positive().nullable().optional(),
@@ -393,10 +398,11 @@ router.patch('/:id', async (req, res) => {
         }});
     }
 
-    const { name, food_type_id, brand_product_id, quantity, unit, added_date, expiry_date, storage, storage_section_id, is_in_door, status } = parsed.data;
+    const { household_id, name, food_type_id, brand_product_id, quantity, unit, added_date, expiry_date, storage, storage_section_id, is_in_door, status } = parsed.data;
 
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? household_id ?? null);
+        if (!householdId) return;
         const sectionProvided = Object.prototype.hasOwnProperty.call(parsed.data, 'storage_section_id');
         let finalStorageSectionId = storage_section_id;
         let finalFridgeId;
@@ -521,7 +527,8 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         const deleteRes = await pool.query(
             `UPDATE items
              SET status = 'removed',
