@@ -1,14 +1,15 @@
 const express = require('express');
 const pool = require('../db');
 const requireAuth = require('../middleware/auth');
-const { getHouseholdId } = require('../helpers/household');
+const { requireHouseholdId } = require('../helpers/household');
 
 const router = express.Router();
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         const values = [householdId];
         let whereClause = '';
 

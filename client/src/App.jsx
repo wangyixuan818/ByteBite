@@ -7,6 +7,7 @@ import ProtectedRoute from './route/ProtectedRoute'
 import LandingPage from './page/LandingPage'
 import SuggestionPage from './page/SuggestionPage'
 import RecipeDetailPage from './page/RecipeDetailPage'
+import ProfilePage from './page/ProfilePage'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Route path="/signup" element={<SignupPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path='/dashboard' element={<Dashboard />} />
+        <Route path='/dashboard/profile' element={<ProfilePage />} />
         <Route path='/dashboard/recipes' element={<SuggestionPage />} />
         <Route path='/dashboard/recipes/:id' element={<RecipeDetailPage />} />
       </Route>

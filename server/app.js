@@ -22,7 +22,7 @@ const householdsRoutes = require('./routes/households');
 // note: Middleware = a function that runs on every incoming request before it reaches the route
 // make cors origin configurable via env var, default to localhost:5173 for dev
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
-app.use(express.json());                            
+app.use(express.json({ limit: '1mb' }));                            
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/items', itemsRoutes);

@@ -332,7 +332,12 @@ export default function Dashboard() {
             <nav className="topbar">
                 <BrandTitle />
                 <div className="button-row">
-                    <span>{user?.display_name}</span>
+                    <button className="topbar-profile-link" type="button" onClick={() => navigate('/dashboard/profile')}>
+                        <span className="topbar-profile-avatar" aria-hidden="true">
+                            {(user?.display_name || 'B').trim().slice(0, 1).toUpperCase()}
+                        </span>
+                        <span>{user?.display_name}</span>
+                    </button>
                     <button className="button secondary" onClick={logout}>Log out</button>
                 </div>
             </nav>

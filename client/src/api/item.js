@@ -1,31 +1,37 @@
 import { client } from './client'
 import { getAuthHeader } from "../context/AuthenticationContext";
+import { getCurrentHouseholdId, withCurrentHouseholdParams } from '../utils/currentHousehold';
+
+const activeHouseholdConfig = (params = {}) => ({
+    headers: getAuthHeader(),
+    params: withCurrentHouseholdParams(params),
+});
+
+const activeHouseholdBody = (data = {}) => {
+    const householdId = getCurrentHouseholdId();
+    return householdId ? { ...data, household_id: Number(householdId) } : data;
+};
 
 export const getFoodTypes = () => {
-    const headers = getAuthHeader();
-    return client.get('/api/v1/food-types', { headers });
+    return client.get('/api/v1/food-types', activeHouseholdConfig());
 }
 
 export const getCategories = () => {
-    const headers = getAuthHeader();
-    return client.get('/api/v1/categories', { headers });
+    return client.get('/api/v1/categories', activeHouseholdConfig());
 }
 
 // TODO(backend): implement POST /categories, including optional multipart thumbnail handling.
 export const createCategory = ({ name, default_storage = 'fridge' }) => {
-    const headers = getAuthHeader();
-    return client.post('/api/v1/categories', { name, default_storage }, { headers });
+    return client.post('/api/v1/categories', { name, default_storage }, activeHouseholdConfig());
 }
 
 // TODO(backend): implement POST /food-types and return { food_type }.
 export const createFoodType = (data) => {
-    const headers = getAuthHeader();
-    return client.post('/api/v1/food-types', data, { headers });
+    return client.post('/api/v1/food-types', data, activeHouseholdConfig());
 }
 
 export const getBrands = () => {
-    const headers = getAuthHeader();
-    return client.get('/api/v1/brand-products', { headers });
+    return client.get('/api/v1/brand-products', activeHouseholdConfig());
 }
 
 // MS3 revisit: brand creation is paused because brand-specific expiry requires curated shelf-life data.
@@ -35,31 +41,21 @@ export const getBrands = () => {
 // }
 
 export const getItemList = (params = {}) => {
-    const headers = getAuthHeader();
-
-    return client.get('/api/v1/items', { headers, params });
+    return client.get('/api/v1/items', activeHouseholdConfig(params));
 }
 
 export const addItem = (data) => {
-    const headers = getAuthHeader();
-
-    return client.post('/api/v1/items', data, { headers });
+    return client.post('/api/v1/items', activeHouseholdBody(data), activeHouseholdConfig());
 }
 
 export const getItem = (id) => {
-    const headers = getAuthHeader();
-
-    return client.get(`/api/v1/items/${id}`, { headers });
+    return client.get(`/api/v1/items/${id}`, activeHouseholdConfig());
 }
 
 export const updateItem = (id, data) => {
-    const headers = getAuthHeader();
-
-    return client.patch(`/api/v1/items/${id}`, data, { headers });
+    return client.patch(`/api/v1/items/${id}`, data, activeHouseholdConfig());
 }
 
 export const deleteItem = (id) => {
-    const headers = getAuthHeader();
-
-    return client.delete(`/api/v1/items/${id}`, { headers });
+    return client.delete(`/api/v1/items/${id}`, activeHouseholdConfig());
 }
