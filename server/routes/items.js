@@ -560,7 +560,9 @@ async function actOnItem(req, res, targetStatus, dateColumn) {
     // dateColumn is a hardcoded internal value ('consumed_at' | 'disposed_at'), never user input
     const client = await pool.connect();
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;   // requireHouseholdId already sent the 403
+        
         const requested = req.body?.quantity;
 
         await client.query('BEGIN');
