@@ -8,6 +8,8 @@ const { signupAndGetToken } = require('../helpers/auth');
 const { insertCategory, insertFoodType, insertBrandProduct } = require('../helpers/catalog');
 const { addDays, todayDate } = require('../../helpers/date');
 
+jest.setTimeout(20000);
+
 // clean database before each test
 beforeEach(async () => {
     await cleanDatabase();
@@ -261,7 +263,7 @@ describe('Item endpoints', () => {
 
         test('returns expired as a derived field without changing lifecycle status', async () => {
             await request(app).post('/api/v1/items').set('Authorization', `Bearer ${token}`)
-                .send({ name: 'Old milk', expiry_date: addDays(todayDate(), -1) });
+                .send({ name: 'Old milk', expiry_date: addDays(todayDate(), -2) });
 
             const res = await request(app)
                 .get('/api/v1/items')

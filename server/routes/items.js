@@ -5,6 +5,7 @@ const reqAuth = require('../middleware/auth');
 const { formatDate, todayDate, addDays } = require('../helpers/date');
 const { pickDays } = require('../helpers/auto-expiry');
 const { getHouseholdId } = require('../helpers/household');
+const { storageFromSection, getStorageSection } = require('../helpers/storage');
 
 const router = express.Router();
 router.use(reqAuth);
@@ -61,6 +62,8 @@ const createItemSchema = z.object({
     added_date: z.string().optional(), // YYYY-MM-DD
     expiry_date: z.string().optional(), // YYYY-MM-DD
     storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
+    storage_section_id: z.number().int().positive().optional(),
+    is_in_door: z.boolean().optional(),
 });
 
 
@@ -78,7 +81,7 @@ router.post('/', async (req, res) => {
 
     const { name, 
                 food_type_id, brand_product_id, category_id, brand,
-                quantity, unit, added_date, expiry_date, storage } 
+                quantity, unit, added_date, expiry_date, storage, storage_section_id, is_in_door } 
                     = parsed.data;
 
     try {
@@ -90,6 +93,27 @@ router.post('/', async (req, res) => {
         let resolvedExpiryDate = expiry_date ?? null;
         let expiryIsEstimated = false;
         let finalStorage = storage ?? null; // auto fall back if not defined
+        let finalStorageSectionId = storage_section_id ?? null;
+        let finalFridgeId = null;
+        let finalIsInDoor = is_in_door ?? false;
+
+        if (finalStorageSectionId) {
+            const section = await getStorageSection(pool, householdId, finalStorageSectionId);
+            if (!section) {
+                return res.status(400).json({ error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid storage section',
+                }});
+            }
+            if (finalIsInDoor && !section.has_door_space) {
+                return res.status(400).json({ error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'This storage section has no door space',
+                }});
+            }
+            finalFridgeId = section.fridge_id ?? null;
+            finalStorage = storageFromSection(section.section_type, finalIsInDoor);
+        }
 
         // estimated expiry duration
         let shelfLifeDays = null;
@@ -294,11 +318,11 @@ router.post('/', async (req, res) => {
 
         const insertRes = await pool.query(
             `INSERT INTO items
-            (household_id, name, food_type_id, brand_product_id, category_id, initial_quantity, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12)
+            (household_id, fridge_id, storage_section_id, name, food_type_id, brand_product_id, category_id, initial_quantity, quantity, unit, added_date, expiry_date, expiry_is_estimated, storage, is_in_door, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING id`,
-            [householdId, name, matchedFoodTypeId, matchedBrandId, matchedCategoryId, quantity ?? null, unit ?? null, finalAddedDate,
-                resolvedExpiryDate, expiryIsEstimated, finalStorage ?? null, req.user.userId]
+            [householdId, finalFridgeId, finalStorageSectionId, name, matchedFoodTypeId, matchedBrandId, matchedCategoryId, quantity ?? null, unit ?? null, finalAddedDate,
+                resolvedExpiryDate, expiryIsEstimated, finalStorage ?? null, finalIsInDoor, req.user.userId]
         );
         const itemRes = await pool.query(
             `SELECT ${itemSelectFields} FROM items WHERE id = $1`,
@@ -353,6 +377,8 @@ const updateItemSchema = z.object({
     added_date: z.string().optional(),
     expiry_date: z.string().optional(),
     storage: z.enum(['fridge', 'freezer', 'pantry', 'fridge door', 'fresh zone']).optional(),
+    storage_section_id: z.number().int().positive().nullable().optional(),
+    is_in_door: z.boolean().optional(),
     status: z.enum(['active', 'consumed', 'disposed', 'removed']).optional(),
 });
 
@@ -367,43 +393,111 @@ router.patch('/:id', async (req, res) => {
         }});
     }
 
-    const { name, food_type_id, brand_product_id, quantity, unit, added_date, expiry_date, storage, status } = parsed.data;
+    const { name, food_type_id, brand_product_id, quantity, unit, added_date, expiry_date, storage, storage_section_id, is_in_door, status } = parsed.data;
 
     try {
         const householdId = await getHouseholdId(req.user.userId);
+        const sectionProvided = Object.prototype.hasOwnProperty.call(parsed.data, 'storage_section_id');
+        let finalStorageSectionId = storage_section_id;
+        let finalFridgeId;
+        let finalStorage = storage;
+        let finalIsInDoor = is_in_door;
+
+        if (sectionProvided && finalStorageSectionId) {
+            const section = await getStorageSection(pool, householdId, finalStorageSectionId);
+            if (!section) {
+                return res.status(400).json({ error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid storage section',
+                }});
+            }
+            const doorPlacement = finalIsInDoor ?? false;
+            if (doorPlacement && !section.has_door_space) {
+                return res.status(400).json({ error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'This storage section has no door space',
+                }});
+            }
+            finalFridgeId = section.fridge_id ?? null;
+            finalStorage = storageFromSection(section.section_type, doorPlacement);
+            finalIsInDoor = doorPlacement;
+        } else if (sectionProvided && finalStorageSectionId === null) {
+            finalFridgeId = null;
+            finalIsInDoor = false;
+        } else if (finalIsInDoor !== undefined) {
+            const current = await pool.query(
+                `SELECT ss.id, ss.fridge_id, ss.section_type, ss.has_door_space
+                 FROM items i
+                 LEFT JOIN storage_sections ss ON ss.id = i.storage_section_id
+                 WHERE i.id = $1 AND i.household_id = $2`,
+                [req.params.id, householdId]
+            );
+            const section = current.rows[0];
+            if (!section) {
+                return res.status(404).json({ error: {
+                    code: 'NOT_FOUND',
+                    message: 'Item not found'
+                }});
+            }
+            if (section.id && finalIsInDoor && !section.has_door_space) {
+                return res.status(400).json({ error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'This storage section has no door space',
+                }});
+            }
+            if (section.id) finalStorage = storageFromSection(section.section_type, finalIsInDoor);
+        }
+
+        const updates = [];
+        const values = [];
+        const addUpdate = (sql, value) => {
+            values.push(value);
+            updates.push(sql.replace('?', `$${values.length}`));
+        };
+
+        if (name !== undefined) addUpdate('name = ?', name);
+        if (food_type_id !== undefined) addUpdate('food_type_id = ?', food_type_id);
+        if (brand_product_id !== undefined) addUpdate('brand_product_id = ?', brand_product_id);
+        if (quantity !== undefined) addUpdate('quantity = ?', quantity);
+        if (unit !== undefined) addUpdate('unit = ?', unit);
+        if (added_date !== undefined) addUpdate('added_date = ?', added_date);
+        if (expiry_date !== undefined) {
+            addUpdate('expiry_date = ?', expiry_date);
+            updates.push('expiry_is_estimated = false');
+        }
+        if (finalStorage !== undefined) addUpdate('storage = ?', finalStorage);
+        if (sectionProvided) {
+            addUpdate('storage_section_id = ?', finalStorageSectionId);
+            addUpdate('fridge_id = ?', finalFridgeId ?? null);
+        }
+        if (finalIsInDoor !== undefined) addUpdate('is_in_door = ?', finalIsInDoor);
+        if (status !== undefined) {
+            addUpdate('status = ?', status);
+            updates.push(`status_updated_at = CASE WHEN $${values.length}::text IS DISTINCT FROM status THEN now() ELSE status_updated_at END`);
+            updates.push(`consumed_at = CASE
+                WHEN $${values.length}::text = 'consumed' THEN LEAST(CURRENT_DATE, COALESCE(expiry_date, CURRENT_DATE))
+                WHEN $${values.length}::text = 'active' THEN NULL
+                ELSE consumed_at
+            END`);
+            updates.push(`disposed_at = CASE
+                WHEN $${values.length}::text = 'disposed' THEN CURRENT_DATE
+                WHEN $${values.length}::text = 'active' THEN NULL
+                ELSE disposed_at
+            END`);
+            updates.push(`removed_at = CASE
+                WHEN $${values.length}::text = 'removed' THEN CURRENT_DATE
+                WHEN $${values.length}::text = 'active' THEN NULL
+                ELSE removed_at
+            END`);
+        }
+        updates.push('updated_at = now()');
+        values.push(req.params.id, householdId);
+
         const updateRes = await pool.query(
-            `UPDATE items SET
-                name = COALESCE($1, name),
-                food_type_id = COALESCE($2, food_type_id),
-                brand_product_id = COALESCE($3, brand_product_id),
-                quantity = COALESCE($4, quantity),
-                unit = COALESCE($5, unit),
-                added_date = COALESCE($6, added_date),
-                expiry_date = COALESCE($7, expiry_date),
-                expiry_is_estimated = CASE WHEN $7::date IS NOT NULL THEN false ELSE expiry_is_estimated END,   --if this update adds a expiry date, then it will update the estimation flag to false
-                storage = COALESCE($8, storage),
-                status = COALESCE($9, status),
-                status_updated_at = CASE WHEN $9::text IS NOT NULL AND $9::text IS DISTINCT FROM status THEN now() ELSE status_updated_at END,
-                consumed_at = CASE
-                    WHEN $9::text = 'consumed' THEN LEAST(CURRENT_DATE, COALESCE(expiry_date, CURRENT_DATE))
-                    WHEN $9::text = 'active' THEN NULL
-                    ELSE consumed_at
-                END,
-                disposed_at = CASE
-                    WHEN $9::text = 'disposed' THEN CURRENT_DATE
-                    WHEN $9::text = 'active' THEN NULL
-                    ELSE disposed_at
-                END,
-                removed_at = CASE
-                    WHEN $9::text = 'removed' THEN CURRENT_DATE
-                    WHEN $9::text = 'active' THEN NULL
-                    ELSE removed_at
-                END,
-                updated_at = now()
-            WHERE id = $10 AND household_id = $11
-            RETURNING id`,
-            [name ?? null, food_type_id ?? null, brand_product_id ?? null, quantity ?? null, unit ?? null, added_date ?? null, expiry_date ?? null,
-                storage ?? null, status ?? null, req.params.id, householdId]
+            `UPDATE items SET ${updates.join(', ')}
+             WHERE id = $${values.length - 1} AND household_id = $${values.length}
+             RETURNING id`,
+            values
         );
         if (updateRes.rows.length === 0) {
             return res.status(404).json({ error: {
