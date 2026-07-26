@@ -109,6 +109,43 @@ describe('GET /api/v1/auth/me', () => {
     });
 });
 
+describe('PATCH /api/v1/auth/me', () => {
+    test('updates display name and profile picture for the current user', async () => {
+        const signup = await request(app).post('/api/v1/auth/signup')
+            .send({ email: 'profile@example.com', password: 'password123', display_name: 'Before' });
+        const image = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w==';
+
+        const resp = await request(app)
+            .patch('/api/v1/auth/me')
+            .set('Authorization', `Bearer ${signup.body.token}`)
+            .send({
+                display_name: 'After',
+                profile_picture_url: image,
+            });
+
+        expect(resp.status).toBe(200);
+        expect(resp.body.user.display_name).toBe('After');
+        expect(resp.body.user.profile_picture_url).toBe(image);
+        expect(resp.body.user.password_hash).toBeUndefined();
+    });
+
+    test('returns 400 for an invalid profile picture payload', async () => {
+        const signup = await request(app).post('/api/v1/auth/signup')
+            .send({ email: 'badpic@example.com', password: 'password123', display_name: 'Bad Pic' });
+
+        const resp = await request(app)
+            .patch('/api/v1/auth/me')
+            .set('Authorization', `Bearer ${signup.body.token}`)
+            .send({
+                display_name: 'Bad Pic',
+                profile_picture_url: 'not-an-image',
+            });
+
+        expect(resp.status).toBe(400);
+        expect(resp.body.error.code).toBe('VALIDATION_ERROR');
+    });
+});
+
 describe('POST /api/v1/auth/logout', () => {
     test('returns 204 with a valid token', async () => {
         const signup = await request(app).post('/api/v1/auth/signup')

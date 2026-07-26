@@ -50,6 +50,20 @@ const signupSchema = z.object({
   display_name: z.string().min(1),
 });
 
+const updateProfileSchema = z.object({
+    display_name: z.string().min(1).max(80),
+    profile_picture_url: z.union([
+        z.string().max(700000).refine(value => (
+            value.startsWith('data:image/jpeg;base64,') ||
+            value.startsWith('data:image/png;base64,') ||
+            value.startsWith('data:image/webp;base64,') ||
+            /^https?:\/\//.test(value)
+        ), 'Profile picture must be an uploaded image.'),
+        z.literal(''),
+        z.null()
+    ]).optional(),
+});
+
 
 router.post('/signup', async (req, res) => {
     const parsed = signupSchema.safeParse(req.body);
@@ -122,6 +136,44 @@ router.post('/signup', async (req, res) => {
         }});
     } finally {
         client.release();
+    }
+});
+
+router.patch('/me', authenticateToken, async (req, res) => {
+    const parsed = updateProfileSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const msg = parsed.error.issues.map(i => i.message).join('; ');
+        return res.status(400).json({ error: {
+            code: 'VALIDATION_ERROR',
+            message: msg
+        }});
+    }
+
+    try {
+        const profilePictureUrl = parsed.data.profile_picture_url || null;
+        const result = await pool.query(
+            `UPDATE users
+             SET display_name = $1, profile_picture_url = $2
+             WHERE id = $3
+             RETURNING id, email, display_name, profile_picture_url`,
+            [parsed.data.display_name.trim(), profilePictureUrl, req.user.userId]
+        );
+
+        const user = result.rows[0];
+        if (!user) {
+            return res.status(401).json({ error: {
+                code: 'UNAUTHENTICATED',
+                message: 'User not found'
+            }});
+        }
+
+        return res.status(200).json({ user });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: {
+            code: 'SERVER_ERROR',
+            message: 'Something went wrong'
+        }});
     }
 });
 

@@ -1,14 +1,15 @@
 const express = require('express');
 const pool = require('../db');
 const requireAuth = require('../middleware/auth');
-const { getHouseholdId } = require('../helpers/household');
+const { requireHouseholdId } = require('../helpers/household');
 
 const router = express.Router();
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         const result = await pool.query(
             `SELECT id, name, default_storage, pantry_days, fridge_days, freezer_days, household_id
              FROM categories
@@ -45,7 +46,8 @@ router.post('/', async(req, res) => {
     }
 
     try {
-        const householdId = await getHouseholdId(req.user.userId);
+        const householdId = await requireHouseholdId(req, res, req.query.household_id ?? null);
+        if (!householdId) return;
         // reuse an existing category with the same name (public, or already in my household)
         const existing = await pool.query(
             `SELECT id, name, default_storage, pantry_days, fridge_days, freezer_days, household_id
