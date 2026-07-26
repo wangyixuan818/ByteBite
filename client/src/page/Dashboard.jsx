@@ -1142,7 +1142,7 @@ export default function Dashboard() {
                             {fridges.map(fridge => {
                                 const isCurrent = String(fridge.id) === String(activeFridge?.id);
                                 const model = getModelById(fridge.model_type);
-                                const fridgeItems = itemList.filter(item => !item.fridge_id || Number(item.fridge_id) === Number(fridge.id));
+                                const fridgeItems = getCurrentFridgeItems(itemList, fridge);
                                 return (
                                     <article className={`fridge-management-card${isCurrent ? ' is-current' : ''}`} key={fridge.id}>
                                         <img src={model.image} alt="" />

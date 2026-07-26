@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useAuthentication } from '../context/AuthenticationContext';
 import { addItem, getFoodTypes, getItemList, consumeItem, disposeItem, deleteItem } from '../api/item';
+import { getFridges } from '../api/fridge';
 import { normaliseName, searchByName } from '../utils/text';
+
+const CURRENT_FRIDGE_KEY = 'bytebite-current-fridge-id';
 
 
 // date parsing
@@ -115,6 +118,42 @@ function matchFoodType(name, foodTypes) {
     return searchByName(foodTypes, name)[0] ?? null;
 }
 
+const storageTypeForMatch = (storage) => ({
+    fridge: 'fridge',
+    freezer: 'freezer',
+    pantry: 'pantry',
+    'fresh zone': 'fresh_zone',
+    'fridge door': 'fridge',
+})[storage] ?? storage;
+
+export function pickStoragePlacement(activeFridge, preferredStorage = 'fridge') {
+    const sectionOptions = (activeFridge?.sections ?? []).filter(section => (
+        section.id && (
+            String(section.fridge_id) === String(activeFridge?.id) ||
+            section.fridge_id === null
+        )
+    ));
+    if (!sectionOptions.length) return null;
+
+    const wantedType = storageTypeForMatch(preferredStorage);
+    const wantsDoor = preferredStorage === 'fridge door';
+    const section =
+        sectionOptions.find(option => option.section_type === wantedType && Boolean(option.has_door_space) === wantsDoor) ??
+        sectionOptions.find(option => option.section_type === wantedType) ??
+        sectionOptions.find(option => option.section_type === 'fridge') ??
+        sectionOptions[0];
+
+    return {
+        storage_section_id: Number(section.id),
+        is_in_door: wantsDoor && Boolean(section.has_door_space),
+    };
+}
+
+function getSelectedFridge(fridges = []) {
+    const storedFridgeId = localStorage.getItem(CURRENT_FRIDGE_KEY);
+    return fridges.find(fridge => String(fridge.id) === String(storedFridgeId)) ?? fridges[0] ?? null;
+}
+
 export function parseCommand(input, foodTypes) {
     let s = input.trim().toLowerCase();
     if (!s) return null;
@@ -152,6 +191,7 @@ export function parseCommand(input, foodTypes) {
         rawName,
         displayName: match ? match.name : titleCase(rawName),
         foodTypeId: match?.id,
+        defaultStorage: match?.default_storage,
         expiryDate,
     };
 }
@@ -253,6 +293,9 @@ export default function QuickAddAssistant() {
                 const payload = { name: p.displayName, quantity: p.quantity ?? 1 };
                 if (p.foodTypeId) payload.food_type_id = p.foodTypeId;
                 if (p.expiryDate) payload.expiry_date = p.expiryDate;
+                const fridgeRes = await getFridges();
+                const placement = pickStoragePlacement(getSelectedFridge(fridgeRes.data ?? []), p.defaultStorage);
+                if (placement) Object.assign(payload, placement);
                 await addItem(payload);
                 setMessage(`Added ${p.quantity ?? 1} × ${p.displayName}.`);
             } else if (p.action === 'consume') {
