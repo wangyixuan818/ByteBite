@@ -10,6 +10,8 @@ const blankDetails = {
     quantity: 1,
     unit: '',
     storage: '',
+    storageSectionId: '',
+    isInDoor: false,
     expiryDate: '',
     // estimateExpiry: true,  
     saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
@@ -34,7 +36,64 @@ const placeholderIcon = categoryIconBySlug['custom-placeholder'];
 const getCategoryIcon = (name) => categoryIconBySlug[slugify(name)] ?? placeholderIcon;
 const getFoodTypeIcon = (name) => foodTypeIconBySlug[slugify(name)] ?? placeholderIcon;
 
-export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) => {
+const sectionStorageValue = (sectionType) => ({
+    fridge: 'fridge',
+    freezer: 'freezer',
+    fresh_zone: 'fresh zone',
+    pantry: 'pantry',
+})[sectionType] ?? '';
+
+const storageTypeForMatch = (storage) => ({
+    fridge: 'fridge',
+    freezer: 'freezer',
+    pantry: 'pantry',
+    'fresh zone': 'fresh_zone',
+    'fridge door': 'fridge',
+})[storage] ?? storage;
+
+const buildSectionOptions = (activeFridge) => (
+    activeFridge?.sections ?? []
+).filter(section => (
+    section.id && (
+        String(section.fridge_id) === String(activeFridge?.id) ||
+        section.fridge_id === null
+    )
+)).flatMap(section => {
+    const baseOption = {
+        id: String(section.id),
+        value: `${section.id}:main`,
+        label: section.name || section.section_key,
+        sectionType: section.section_type,
+        storage: sectionStorageValue(section.section_type),
+        isInDoor: false,
+    };
+
+    if (!section.has_door_space || section.section_type === 'pantry') return [baseOption];
+
+    return [
+        baseOption,
+        {
+            ...baseOption,
+            value: `${section.id}:door`,
+            label: `${baseOption.label} door`,
+            storage: section.section_type === 'fridge' ? 'fridge door' : baseOption.storage,
+            isInDoor: true,
+        },
+    ];
+});
+
+const placementValue = (sectionId, isInDoor) => sectionId ? `${sectionId}:${isInDoor ? 'door' : 'main'}` : '';
+
+const pickSectionForStorage = (sectionOptions, storage) => {
+    if (!sectionOptions.length) return null;
+    const wantedType = storageTypeForMatch(storage);
+    const wantsDoor = storage === 'fridge door';
+    return sectionOptions.find(option => (
+        option.sectionType === wantedType && option.isInDoor === wantsDoor
+    )) ?? sectionOptions.find(option => option.sectionType === wantedType) ?? sectionOptions[0];
+};
+
+export const AddItemForm = ({ itemToEdit = null, activeFridge = null, onItemAdded, onItemUpdated }) => {
     const isEditing = Boolean(itemToEdit);
     const [step, setStep] = useState(isEditing ? 'details' : 'category');
     const [categories, setCategories] = useState([]);
@@ -53,6 +112,8 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         quantity: itemToEdit.quantity ?? 1,
         unit: itemToEdit.unit ?? '',
         storage: itemToEdit.storage ?? '',
+        storageSectionId: itemToEdit.storage_section_id ? String(itemToEdit.storage_section_id) : '',
+        isInDoor: Boolean(itemToEdit.is_in_door),
         expiryDate: toDateInput(itemToEdit.expiry_date),
         // estimateExpiry: false,
         saveFoodType: true,  // default to saving a custom food type, since the user is explicitly creating one
@@ -106,6 +167,8 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         [brandProducts, selectedFoodType]
     );
 
+    const sectionOptions = useMemo(() => buildSectionOptions(activeFridge), [activeFridge]);
+
     const activeFoodIcon = selectedFoodType
         ? getFoodTypeIcon(selectedFoodType.name)
         : selectedCategory
@@ -123,9 +186,16 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
     };
 
     const selectExistingFoodType = (type) => {
+        const defaultSection = pickSectionForStorage(sectionOptions, type.default_storage);
         setSelectedFoodType(type);
         setFoodTypeIsCustom(false);
-        setDetails({ ...blankDetails, name: type.name });
+        setDetails({
+            ...blankDetails,
+            name: type.name,
+            storage: defaultSection?.storage ?? type.default_storage ?? '',
+            storageSectionId: defaultSection?.id ?? '',
+            isInDoor: Boolean(defaultSection?.isInDoor),
+        });
         setSelectedBrandProductId('');
         setStep('details');
     };
@@ -140,7 +210,14 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         }
         setSelectedFoodType(null);
         setFoodTypeIsCustom(true);
-        setDetails({ ...blankDetails, name: trimmed });   // pre-fill the item Name with the food type
+        const defaultSection = sectionOptions[0] ?? null;
+        setDetails({
+            ...blankDetails,
+            name: trimmed, // pre-fill the item Name with the food type
+            storage: defaultSection?.storage ?? '',
+            storageSectionId: defaultSection?.id ?? '',
+            isInDoor: Boolean(defaultSection?.isInDoor),
+        });
         setSelectedBrandProductId('');
         setStep('details');
         setError('');
@@ -163,12 +240,28 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
         setCategoryIsCustom(true);
         setSelectedFoodType(null);
         setFoodTypeIsCustom(true);
-        setDetails(blankDetails);
+        const defaultSection = sectionOptions[0] ?? null;
+        setDetails({
+            ...blankDetails,
+            storage: defaultSection?.storage ?? '',
+            storageSectionId: defaultSection?.id ?? '',
+            isInDoor: Boolean(defaultSection?.isInDoor),
+        });
         setStep('details');
         setError('');
     };
 
     const updateDetail = (field, value) => setDetails(current => ({ ...current, [field]: value }));
+
+    const updateSection = (placement) => {
+        const selectedSection = sectionOptions.find(option => option.value === placement);
+        setDetails(current => ({
+            ...current,
+            storageSectionId: selectedSection?.id ?? '',
+            storage: selectedSection?.storage ?? current.storage,
+            isInDoor: Boolean(selectedSection?.isInDoor),
+        }));
+    };
 
     const buildPayload = async () => {
         let foodTypeId = selectedFoodType?.id ?? itemToEdit?.food_type_id;
@@ -194,6 +287,8 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
             quantity: Number(details.quantity),
             unit: details.unit.trim() || undefined,
             storage: details.storage || undefined,
+            storage_section_id: details.storageSectionId ? Number(details.storageSectionId) : undefined,
+            is_in_door: details.storageSectionId ? details.isInDoor : undefined,
             food_type_id: foodTypeId || undefined,
             brand: brandName.trim() || undefined,
             brand_product_id: selectedBrandProductId ? Number(selectedBrandProductId) : undefined,
@@ -334,15 +429,17 @@ export const AddItemForm = ({ itemToEdit = null, onItemAdded, onItemUpdated }) =
                 </div>
 
                 <label>
-                    Storage
-                    <select value={details.storage} onChange={event => updateDetail('storage', event.target.value)}>
-                        <option value="">Use catalog default</option>
-                        <option value="fridge">Fridge</option>
-                        <option value="fresh zone">Fresh zone</option>
-                        <option value="freezer">Freezer</option>
-                        <option value="fridge door">Fridge door</option>
-                        <option value="pantry">Pantry</option>
+                    Choose section
+                    <select
+                        value={placementValue(details.storageSectionId, details.isInDoor)}
+                        onChange={event => updateSection(event.target.value)}
+                        required
+                    >
+                        {sectionOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                     </select>
+                    <span className="helper-text">ByteBite picks the closest section from the food library default.</span>
                 </label>
                 
                 {!isEditing && (
