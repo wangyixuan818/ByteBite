@@ -2067,6 +2067,120 @@
 .create-fridge-stepper {
   margin-bottom: 18px;
 }
+.inventory-stage-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  padding: clamp(22px, 5vw, 64px);
+  background:
+    radial-gradient(circle at 18% 26%, rgba(239, 189, 72, .20), transparent 30%),
+    rgba(31, 39, 29, .64);
+  backdrop-filter: blur(12px) saturate(.9);
+  animation: inventoryBackdropIn .22s ease both;
+}
+.inventory-stage {
+  min-height: calc(100vh - clamp(44px, 10vw, 128px));
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: grid;
+  align-items: center;
+  gap: clamp(28px, 6vw, 72px);
+}
+.inventory-stage.has-visualizer {
+  grid-template-columns: minmax(240px, .7fr) minmax(0, 1.3fr);
+}
+.inventory-stage.is-list-only {
+  width: min(860px, 100%);
+  grid-template-columns: 1fr;
+}
+.inventory-stage.is-list-only .inventory-stage-content {
+  width: 100%;
+  justify-self: center;
+}
+.inventory-stage-visual {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  color: #f9f3d7;
+  pointer-events: none;
+}
+.storage-combo-icon-expanded {
+  width: min(34vw, 320px);
+  height: min(42vw, 360px);
+  transform-origin: left center;
+  animation: storageComboExpand .44s cubic-bezier(.2, 0, 0, 1) both;
+  filter: drop-shadow(0 32px 44px rgba(10, 16, 10, .34));
+}
+.storage-combo-icon-expanded .storage-combo-fridge {
+  width: min(18vw, 168px);
+  height: min(34vw, 310px);
+  border-width: 5px;
+  border-radius: 28px 28px 18px 18px;
+  padding: clamp(24px, 4vw, 42px) clamp(18px, 3vw, 30px);
+}
+.storage-combo-icon-expanded .storage-combo-pantry {
+  width: min(14vw, 132px);
+  height: min(27vw, 245px);
+  border-width: 5px;
+  border-radius: 28px 28px 16px 16px;
+  padding: clamp(20px, 3vw, 34px) clamp(16px, 2vw, 24px);
+}
+.inventory-stage-content {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  min-width: 0;
+  max-height: calc(100vh - 96px);
+}
+.inventory-stage-content > .section-heading,
+.inventory-stage-content > .inventory-search,
+.inventory-stage-content > .inventory-filters,
+.inventory-stage-content > .empty-state {
+  animation: inventoryCardIn .34s cubic-bezier(.2, 0, 0, 1) both;
+}
+.inventory-stage-content > .section-heading {
+  margin: 0;
+  color: #fff8df;
+  animation-delay: .10s;
+}
+.inventory-stage-content > .section-heading h2,
+.inventory-stage-content > .section-heading .eyebrow {
+  color: inherit;
+}
+.inventory-stage-content > .inventory-search {
+  animation-delay: .16s;
+}
+.inventory-stage-content > .inventory-filters,
+.inventory-stage-content > .empty-state {
+  animation-delay: .20s;
+}
+.inventory-stage-content .item-list {
+  max-height: min(58vh, 600px);
+  overflow: auto;
+  padding: 2px 10px 8px 2px;
+}
+.inventory-stage-content .item-card {
+  animation: inventoryCardIn .38s cubic-bezier(.2, 0, 0, 1) both;
+}
+.inventory-stage-content .item-card:nth-child(1) { animation-delay: .18s; }
+.inventory-stage-content .item-card:nth-child(2) { animation-delay: .23s; }
+.inventory-stage-content .item-card:nth-child(3) { animation-delay: .28s; }
+.inventory-stage-content .item-card:nth-child(4) { animation-delay: .33s; }
+.inventory-stage-content .item-card:nth-child(5) { animation-delay: .38s; }
+.inventory-stage-content .item-card:nth-child(6) { animation-delay: .43s; }
+.inventory-stage-content .item-card:nth-child(7) { animation-delay: .48s; }
+.inventory-stage-content .item-card:nth-child(8) { animation-delay: .53s; }
+.inventory-stage-content .item-card:nth-child(n+9) { animation-delay: .58s; }
+.inventory-stage-close {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  z-index: 2;
+}
+.inventory-modal { width: min(1120px, 100%); }
+.add-food-modal { width: min(720px, 100%); }
 .confirm-panel { width: min(360px, calc(100vw - 40px)); display: grid; gap: 14px; }
 .mode-switch { display: flex; gap: 18px; border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
 .mode-switch legend, .field-title { font-weight: 750; }
@@ -2884,6 +2998,378 @@
   align-items: center;
   gap: 7px;
 }
+.profile-page > .profile-hero,
+.profile-page > .profile-layout {
+  width: min(1100px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+.profile-hero {
+  padding: clamp(34px, 7vh, 58px) 0 24px;
+}
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 4vw, 30px);
+}
+.profile-avatar {
+  width: clamp(104px, 18vw, 148px);
+  height: clamp(104px, 18vw, 148px);
+  flex: 0 0 auto;
+  border: 4px solid rgba(255, 250, 232, .92);
+  border-radius: 42% 58% 54% 46% / 52% 46% 54% 48%;
+  object-fit: cover;
+  box-shadow: 0 18px 30px rgba(56, 75, 45, .15);
+}
+.profile-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 247, .92), transparent 34%),
+    linear-gradient(145deg, #efbd48, #e8752f);
+  color: #315438;
+  font-family: "Londrina Solid", "Trebuchet MS", system-ui, sans-serif;
+  font-size: clamp(2.4rem, 8vw, 4.2rem);
+  line-height: 1;
+}
+.profile-identity h1 {
+  margin-bottom: 10px;
+}
+.profile-identity p:not(.eyebrow) {
+  color: #5f7d55;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.profile-edit-button {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, .82fr) minmax(0, 1.18fr);
+  gap: 22px;
+  align-items: start;
+}
+.household-actions-panel,
+.household-detail-panel {
+  display: grid;
+  gap: 18px;
+}
+.household-mini-form,
+.rename-household-form,
+.profile-edit-form {
+  display: grid;
+  gap: 8px;
+}
+.household-mini-form label,
+.rename-household-form label,
+.profile-edit-form label {
+  color: #315438;
+  font-weight: 800;
+}
+.household-inline-control {
+  display: flex;
+  gap: 10px;
+}
+.household-inline-control input {
+  min-width: 0;
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid rgba(83, 112, 76, .36);
+  border-radius: 6px;
+  background: rgba(255, 255, 247, .88);
+  color: #234c35;
+  padding: 10px 12px;
+}
+.household-inline-control input:focus {
+  outline: 3px solid rgba(132, 160, 119, .26);
+  border-color: #6d8f61;
+}
+.profile-edit-form input,
+.rename-household-form > input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(83, 112, 76, .36);
+  border-radius: 6px;
+  background: rgba(255, 255, 247, .88);
+  color: #234c35;
+  padding: 10px 12px;
+}
+.profile-edit-form input:focus,
+.rename-household-form > input:focus {
+  outline: 3px solid rgba(132, 160, 119, .26);
+  border-color: #6d8f61;
+}
+.household-inline-control .button,
+.household-detail-heading .button,
+.household-danger-zone .button,
+.invite-code-box .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.household-list {
+  display: grid;
+  gap: 10px;
+}
+.household-card {
+  width: 100%;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(83, 112, 76, .20);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .68);
+  color: #315438;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.household-card:hover,
+.household-card.is-selected {
+  border-color: rgba(232, 117, 47, .42);
+  background:
+    radial-gradient(circle at 92% 14%, rgba(239, 189, 72, .20), transparent 30%),
+    rgba(255, 247, 232, .90);
+}
+.household-card strong,
+.household-card small {
+  display: block;
+}
+.household-card strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 3px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+}
+.household-card small {
+  color: #67835c;
+}
+.household-card-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 43% 57% 47% 53% / 52% 44% 56% 48%;
+  background: rgba(220, 233, 200, .76);
+  color: #416f3f;
+}
+.household-detail-heading {
+  align-items: flex-start;
+}
+.current-household-badge,
+.current-household-title-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid rgba(65, 111, 63, .20);
+  border-radius: 999px;
+  background: rgba(220, 233, 200, .82);
+  color: #416f3f;
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.current-household-badge {
+  padding: 3px 8px;
+  font-size: .72rem;
+}
+.current-household-title-badge {
+  margin-left: 10px;
+  padding: 5px 10px;
+  vertical-align: middle;
+  font-size: .78rem;
+}
+.member-section {
+  display: grid;
+  gap: 12px;
+}
+.member-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #315438;
+}
+.member-section-title h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+.member-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.member-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .66);
+  padding: 10px 12px;
+}
+.member-list strong,
+.member-list small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.member-list strong {
+  color: #315438;
+}
+.member-list small {
+  margin-top: 2px;
+  color: #67835c;
+}
+.member-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 45% 55% 49% 51% / 54% 46% 54% 46%;
+  object-fit: cover;
+}
+.member-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: rgba(239, 189, 72, .72);
+  color: #315438;
+  font-weight: 900;
+}
+.household-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(166, 63, 63, .20);
+  border-radius: 8px;
+  background: rgba(255, 240, 238, .48);
+  padding: 14px;
+}
+.household-switch-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(65, 111, 63, .18);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 94% 18%, rgba(239, 189, 72, .18), transparent 34%),
+    rgba(220, 233, 200, .42);
+  padding: 14px;
+}
+.household-switch-zone strong {
+  display: block;
+  color: #315438;
+  margin-bottom: 4px;
+}
+.household-switch-zone p {
+  margin: 0;
+  color: #67835c;
+  line-height: 1.42;
+}
+.household-danger-zone strong {
+  display: block;
+  color: #8f3434;
+  margin-bottom: 4px;
+}
+.household-danger-zone p,
+.invite-code-helper {
+  margin: 0;
+  color: #67835c;
+  line-height: 1.42;
+}
+.invite-code-modal {
+  width: min(520px, 100%);
+}
+.profile-edit-modal,
+.rename-household-modal {
+  width: min(520px, 100%);
+}
+.profile-edit-form .button-row,
+.rename-household-form .button-row {
+  margin-top: 10px;
+}
+.profile-picture-upload {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-top: 8px;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .58);
+  padding: 12px;
+}
+.profile-picture-preview {
+  width: 84px;
+  height: 84px;
+  border-radius: 42% 58% 54% 46% / 52% 46% 54% 48%;
+  object-fit: cover;
+  box-shadow: 0 10px 18px rgba(56, 75, 45, .13);
+}
+.profile-picture-preview-empty {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 247, .92), transparent 34%),
+    linear-gradient(145deg, #efbd48, #e8752f);
+  color: #315438;
+  font-family: "Londrina Solid", "Trebuchet MS", system-ui, sans-serif;
+  font-size: 2rem;
+}
+.profile-picture-upload input[type="file"] {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.profile-picture-picker {
+  cursor: pointer;
+}
+.profile-picture-error {
+  margin-top: 8px;
+  color: #8f3434;
+}
+.invite-code-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 12px;
+  border: 1px solid rgba(232, 117, 47, .24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 12% 24%, rgba(239, 189, 72, .22), transparent 36%),
+    rgba(255, 252, 239, .82);
+  padding: 14px;
+}
+.invite-code-box span {
+  min-width: 0;
+  flex: 1;
+  color: #315438;
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-size: clamp(1.45rem, 7vw, 2rem);
+  font-weight: 900;
+  letter-spacing: .08em;
+  overflow-wrap: anywhere;
+}
+.regenerate-code-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
 .recipe-detail {
   margin-top: 8px;
   max-width: 900px;
@@ -3277,6 +3763,93 @@
     visibility: visible;
 }
 .tooltip-wrap > .usage-suggestion-button { width: 100%; }
+
+@keyframes inventoryBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes storageComboExpand {
+  from {
+    opacity: .24;
+    transform: translateX(-32px) scale(.32);
+  }
+  64% {
+    opacity: 1;
+    transform: translateX(0) scale(1.035);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes inventoryCardIn {
+  from {
+    opacity: 0;
+    transform: translateX(22px) scale(.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-stage-backdrop,
+  .storage-combo-icon-expanded,
+  .inventory-stage-content > .section-heading,
+  .inventory-stage-content > .inventory-search,
+  .inventory-stage-content > .inventory-filters,
+  .inventory-stage-content > .empty-state,
+  .inventory-stage-content .item-card {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .inventory-stage-backdrop {
+    padding: 18px;
+  }
+  .inventory-stage {
+    min-height: calc(100vh - 36px);
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+  }
+  .inventory-stage-visual {
+    justify-items: start;
+  }
+  .storage-combo-icon-expanded {
+    width: 142px;
+    height: 154px;
+  }
+  .storage-combo-icon-expanded .storage-combo-fridge {
+    width: 80px;
+    height: 142px;
+    border-width: 4px;
+    border-radius: 20px 20px 14px 14px;
+    padding: 20px 15px;
+  }
+  .storage-combo-icon-expanded .storage-combo-pantry {
+    width: 66px;
+    height: 112px;
+    border-width: 4px;
+    border-radius: 20px 20px 12px 12px;
+    padding: 16px 12px;
+  }
+  .inventory-stage-content {
+    max-height: none;
+  }
+  .inventory-stage-content .item-list {
+    max-height: none;
+    overflow: visible;
+  }
+  .inventory-stage-close {
+    top: 0;
+    right: 0;
+  }
+}
 .qa-bubble {
     position: fixed; right: 24px; bottom: 24px; z-index: 60;
     width: 56px; height: 56px; border-radius: 50%;

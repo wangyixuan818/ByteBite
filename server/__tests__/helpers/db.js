@@ -33,8 +33,8 @@ async function cleanDatabase() {
     await pool.query('DELETE FROM food_types');
     await pool.query('DELETE FROM categories');
     await pool.query('DELETE FROM user_household');
-    await pool.query('DELETE FROM users');
     await pool.query('DELETE FROM households');
+    await pool.query('DELETE FROM users');
 }
 // catalog tables are wiped too 
 // each test seeds the exact rows it needs
