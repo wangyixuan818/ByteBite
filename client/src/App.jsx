@@ -7,6 +7,7 @@ import ProtectedRoute from './route/ProtectedRoute'
 import LandingPage from './page/LandingPage'
 import SuggestionPage from './page/SuggestionPage'
 import RecipeDetailPage from './page/RecipeDetailPage'
+import ProfilePage from './page/ProfilePage'
 import QuickAddAssistant from './components/QuickAddAssistant'
 import ProfilePage from './page/ProfilePage'
 
