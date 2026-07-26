@@ -10,18 +10,19 @@ const pad = n => String(n).padStart(2, '0');
 const iso = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
 
 // browser speech recognition (Chrome/Edge/Safari; not Firefox)
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SpeechRecognition =
+    (typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)) || null;
 
-// build a date, rolling to next year if it's already past (used when no year was given)
-function futureDated(year, month, day) {
+// not used anymore
+/* function futureDated(year, month, day) {
     const now = new Date();
     const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     let d = new Date(year, month - 1, day);
     if (d < todayMidnight) d = new Date(year + 1, month - 1, day);
     return iso(d.getFullYear(), d.getMonth() + 1, d.getDate());
-}
+} */
 
-function parseDate(str) {
+export function parseDate(str) {
     // drop ordinal suffixes: "17th" -> "17", "3rd" -> "3" (speech often adds them)
     const s = str.trim().toLowerCase().replace(/(\d{1,2})(?:st|nd|rd|th)\b/g, '$1');
 
@@ -46,7 +47,7 @@ function parseDate(str) {
     if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) return iso(+m[1], +m[2], +m[3]);          // 2026-06-17
     if ((m = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/))) {                                  // 17/6 or 17/6/2026
         if (m[3]) { let y = +m[3]; if (y < 100) y += 2000; return iso(y, +m[2], +m[1]); }
-        return futureDated(year, +m[2], +m[1]);
+        return iso(year, +m[2], +m[1]);
     }
     // 17 june  /  17 june 2027
     if ((m = s.match(/^(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?$/)) && MONTHS[m[2]]) {
@@ -114,7 +115,7 @@ function matchFoodType(name, foodTypes) {
     return searchByName(foodTypes, name)[0] ?? null;
 }
 
-function parseCommand(input, foodTypes) {
+export function parseCommand(input, foodTypes) {
     let s = input.trim().toLowerCase();
     if (!s) return null;
 
