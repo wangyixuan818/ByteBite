@@ -14,10 +14,11 @@ import { searchByName } from '../utils/text';
 import { getCurrentHouseholdId, setCurrentHouseholdId } from '../utils/currentHousehold';
 import {
     FRIDGE_MODEL_SECTIONS,
+    FRIDGE_MODEL_COMPARTMENT_VIEWS,
+    FRIDGE_MODEL_VIEW_OVERRIDES,
     FRIDGE_VIEW_CONFIG,
     STORAGE_SECTIONS,
     STORAGE_TYPE_OPTIONS,
-    TWO_LAYERED_COMPARTMENT_VIEWS,
     buildSectionDrafts,
     getActiveFridge,
     getCurrentFridgeItems,
@@ -35,6 +36,14 @@ import sideBySideVisualizerImage from '../assets/bytebite-ui-v2/fridges/visualiz
 import twoLayeredAllOpenImage from '../assets/bytebite-ui-v2/fridges/two-layered-all-open-pantry.png';
 import twoLayeredUpperOpenImage from '../assets/bytebite-ui-v2/fridges/two-layered-upper-open-pantry.png';
 import twoLayeredLowerOpenImage from '../assets/bytebite-ui-v2/fridges/two-layered-lower-open-pantry.png';
+import miniAllOpenImage from '../assets/bytebite-ui-v2/fridges/mini-all-open-pantry.png';
+import threeLayeredAllOpenImage from '../assets/bytebite-ui-v2/fridges/three-layered-all-open-pantry.png';
+import threeLayeredUpperOpenImage from '../assets/bytebite-ui-v2/fridges/three-layered-upper-open-pantry.png';
+import threeLayeredMiddleOpenImage from '../assets/bytebite-ui-v2/fridges/three-layered-middle-open-pantry.png';
+import threeLayeredLowerOpenImage from '../assets/bytebite-ui-v2/fridges/three-layered-lower-open-pantry.png';
+import sideBySideAllOpenImage from '../assets/bytebite-ui-v2/fridges/side-by-side-all-open-pantry.png';
+import sideBySideLeftOpenImage from '../assets/bytebite-ui-v2/fridges/side-by-side-left-open-pantry.png';
+import sideBySideRightOpenImage from '../assets/bytebite-ui-v2/fridges/side-by-side-right-open-pantry.png';
 
 const EXPIRY_STATUSES = new Set([
     'expired',
@@ -110,6 +119,30 @@ const FRIDGE_STATE_IMAGES = {
         'lower-fridge': twoLayeredLowerOpenImage,
         'lower-door': twoLayeredLowerOpenImage,
         pantry: twoLayeredAllOpenImage,
+    },
+    three_layered: {
+        'all-open': threeLayeredAllOpenImage,
+        'upper-fridge': threeLayeredUpperOpenImage,
+        'upper-door': threeLayeredUpperOpenImage,
+        'middle-fridge': threeLayeredMiddleOpenImage,
+        'middle-door': threeLayeredMiddleOpenImage,
+        'lower-fridge': threeLayeredLowerOpenImage,
+        'lower-door': threeLayeredLowerOpenImage,
+        pantry: threeLayeredAllOpenImage,
+    },
+    mini: {
+        'all-open': miniAllOpenImage,
+        'main-fridge': miniAllOpenImage,
+        'main-door': miniAllOpenImage,
+        'mini-pantry': miniAllOpenImage,
+    },
+    side_by_side: {
+        'all-open': sideBySideAllOpenImage,
+        'left-fridge': sideBySideLeftOpenImage,
+        'left-door': sideBySideLeftOpenImage,
+        'right-fridge': sideBySideRightOpenImage,
+        'right-door': sideBySideRightOpenImage,
+        'side-pantry': sideBySideAllOpenImage,
     },
 };
 
@@ -220,19 +253,35 @@ export default function Dashboard() {
         dismissedNotificationKey === notificationSnoozeKey || isNotificationSnoozed(notificationSnoozeKey);
     const showNotificationPopup = unreadNotifications.length > 0 && !notificationPopupDismissed;
 
-    const activeFridgeVisualizerImage = FRIDGE_VISUALIZER_IMAGES[activeFridge?.model_type] ?? twoLayeredVisualizerImage;
+    const activeFridgeModelType = activeFridge?.model_type;
+    const activeFridgeVisualizerImage = FRIDGE_VISUALIZER_IMAGES[activeFridgeModelType] ?? twoLayeredVisualizerImage;
     const activeSection = STORAGE_SECTIONS.find(section => section.id === activeInventoryView);
-    const hasCompartmentPreview = activeFridge?.model_type === 'two_layered';
+    const activeFridgeViewIds = FRIDGE_MODEL_COMPARTMENT_VIEWS[activeFridgeModelType] ?? [];
+    const hasCompartmentPreview = activeFridgeViewIds.length > 0;
     const activeFridgeStateImages = useMemo(
-        () => FRIDGE_STATE_IMAGES[activeFridge?.model_type] ?? {},
-        [activeFridge?.model_type]
+        () => FRIDGE_STATE_IMAGES[activeFridgeModelType] ?? {},
+        [activeFridgeModelType]
     );
     const allOpenFridgeImage = activeFridgeStateImages['all-open'] ?? activeFridgeVisualizerImage;
     const activeFridgeViewConfig = FRIDGE_VIEW_CONFIG[fridgeView] ?? FRIDGE_VIEW_CONFIG['all-open'];
     const activeFridgeViewImage =
         activeFridgeStateImages[fridgeView] ?? allOpenFridgeImage;
     const fridgeHotspotConfigs = hasCompartmentPreview
-        ? TWO_LAYERED_COMPARTMENT_VIEWS.map(view => ({ id: view, ...FRIDGE_VIEW_CONFIG[view] }))
+        ? activeFridgeViewIds
+            .map(view => {
+                const baseConfig = FRIDGE_VIEW_CONFIG[view];
+                const override = FRIDGE_MODEL_VIEW_OVERRIDES[activeFridgeModelType]?.[view] ?? {};
+                return {
+                    id: view,
+                    ...baseConfig,
+                    ...override,
+                    hotspot: {
+                        ...baseConfig?.hotspot,
+                        ...override.hotspot,
+                    },
+                };
+            })
+            .filter(config => config.hotspot)
         : [];
 
     const visibleInventoryItems = useMemo(() => getVisibleInventoryItems({
@@ -360,12 +409,15 @@ export default function Dashboard() {
 
     const ensureCurrentHousehold = async () => {
         const storedHouseholdId = getCurrentHouseholdId();
-        if (storedHouseholdId) return storedHouseholdId;
-
         const householdRes = await getHouseholds();
-        const firstHouseholdId = householdRes.data.households?.[0]?.id ?? null;
-        if (firstHouseholdId) setCurrentHouseholdId(firstHouseholdId);
-        return firstHouseholdId;
+        const households = householdRes.data.households ?? [];
+        const currentHousehold =
+            households.find(household => String(household.id) === String(storedHouseholdId)) ??
+            households[0] ??
+            null;
+
+        setCurrentHouseholdId(currentHousehold?.id ?? null);
+        return currentHousehold?.id ?? null;
     };
 
     const loadDashboardData = async () => {
@@ -445,6 +497,9 @@ export default function Dashboard() {
     useEffect(() => {
         let ignore = false;
 
+        setError('');
+        setDashboardLoadFailed(false);
+
         ensureCurrentHousehold()
             .then(householdId => {
                 if (!householdId) return { fridges: [], items: [], notifications: [] };
@@ -466,6 +521,8 @@ export default function Dashboard() {
             })
             .then(data => {
                 if (ignore) return;
+                setError('');
+                setDashboardLoadFailed(false);
                 setFridges(data.fridges);
                 setItemList(data.items);
                 setNotifications(data.notifications);
@@ -1556,6 +1613,7 @@ export default function Dashboard() {
                         </div>
                         <AddItemForm
                             itemToEdit={editingItem}
+                            activeFridge={activeFridge}
                             onItemAdded={() => {
                                 fetchItems();
                                 closeForm();

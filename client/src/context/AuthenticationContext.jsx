@@ -1,8 +1,10 @@
 /* eslint-disable react-refresh/only-export-components -- existing context module intentionally shares provider helpers */
 import {createContext, useContext, useEffect, useState} from 'react';
 import { client } from '../api/client';
+import { setCurrentHouseholdId } from '../utils/currentHousehold';
 
 const AuthenticationContext = createContext(null);
+const CURRENT_FRIDGE_KEY = 'bytebite-current-fridge-id';
 
 export const getAuthHeader = () => {
     const token = localStorage.getItem('authenticationToken');
@@ -35,6 +37,8 @@ export function AuthenticationProvider({children}) {
 
     const login = (user, token) => {
         localStorage.setItem('authenticationToken', token);
+        setCurrentHouseholdId(null);
+        localStorage.removeItem(CURRENT_FRIDGE_KEY);
         setUser(user);
     }
 
@@ -45,6 +49,8 @@ export function AuthenticationProvider({children}) {
           .catch(() => {});
 
         localStorage.removeItem('authenticationToken');
+        setCurrentHouseholdId(null);
+        localStorage.removeItem(CURRENT_FRIDGE_KEY);
         setUser(null);
     };
 
