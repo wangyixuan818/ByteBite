@@ -641,6 +641,12 @@ export default function Dashboard() {
         if (visualizerOpeningTimer.current) window.clearTimeout(visualizerOpeningTimer.current);
     }, []);
 
+    useEffect(() => {
+        const refresh = () => fetchItems();
+        window.addEventListener('bytebite:item-added', refresh);
+        return () => window.removeEventListener('bytebite:item-added', refresh);
+    }, []);
+
     const showTemporaryMessage = (text) => {
         setMessage(text);
         window.setTimeout(() => setMessage(''), 3000);

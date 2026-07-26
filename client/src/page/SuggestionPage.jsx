@@ -47,20 +47,36 @@ export default function SuggestionPage() {
             seen.set(id, { id, name: nameById.get(id) ?? item.name });
         }
         return [...seen.values()];
-    }, [items, nameById]);
+    }, [items, nameById]); 
+
+    // all food types from the global catalog, normalised to { id, name }
+    const allIngredients = useMemo(
+        () => foodTypes.map(ft => ({ id: Number(ft.id), name: ft.name })),
+        [foodTypes]
+    );
+
+    // ids we actually have, used to colour the bubbles
+    const fridgeIds = useMemo(
+        () => new Set(fridgeIngredients.map(i => i.id)),
+        [fridgeIngredients]
+    );
 
     // typeahead: fridge ingredients matching the search, excluding ones already added
     const suggestions = useMemo(() => {
         if (!ingredientSearch.trim()) return [];
-        return searchByName(fridgeIngredients, ingredientSearch)
+        return searchByName(allIngredients, ingredientSearch)   // was fridgeIngredients
             .filter(ing => !selectedIngredients.has(ing.id))
             .slice(0, 6);
-    }, [fridgeIngredients, ingredientSearch, selectedIngredients]);
+    }, [allIngredients, ingredientSearch, selectedIngredients]);
 
     // selected ids resolved to names, for the bubbles
     const selectedList = useMemo(
-        () => [...selectedIngredients].map(id => ({ id, name: nameById.get(id) ?? `#${id}` })),
-        [selectedIngredients, nameById]
+        () => [...selectedIngredients].map(id => ({
+            id,
+            name: nameById.get(id) ?? `#${id}`,
+            have: fridgeIds.has(id),
+        })),
+        [selectedIngredients, nameById, fridgeIds]
     );
 
     const addIngredient = (id) => {
@@ -160,7 +176,11 @@ export default function SuggestionPage() {
                 {selectedList.length > 0 ? (
                     <div className="selected-ingredients">
                         {selectedList.map(ing => (
-                            <span key={ing.id} className="ingredient-bubble">
+                            <span
+                                key={ing.id}
+                                className={`ingredient-bubble${ing.have ? '' : ' not-owned'}`}
+                                title={ing.have ? undefined : 'You do not have this item yet.'}
+                            >
                                 {ing.name}
                                 <button type="button" aria-label={`Remove ${ing.name}`} onClick={() => removeIngredient(ing.id)}>×</button>
                             </span>
