@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { parseDate, parseCommand } from '../components/QuickAddAssistant';
+import { parseDate, parseCommand, pickStoragePlacement } from '../components/QuickAddAssistant';
 
 describe('parseCommand', () => {
     test('parses an add command', () => {
@@ -18,6 +18,35 @@ describe('parseCommand', () => {
     });
     test('no quantity leaves it unspecified', () => {
         expect(parseCommand('consume milk', []).quantity).toBe(null);
+    });
+    test('keeps matched food type default storage', () => {
+        const r = parseCommand('add milk', [{ id: 1, name: 'Milk', default_storage: 'fridge' }]);
+        expect(r.defaultStorage).toBe('fridge');
+    });
+});
+
+describe('pickStoragePlacement', () => {
+    const fridge = {
+        id: 10,
+        sections: [
+            { id: 101, fridge_id: 10, section_type: 'freezer', has_door_space: true },
+            { id: 102, fridge_id: 10, section_type: 'fridge', has_door_space: true },
+            { id: 103, fridge_id: null, section_type: 'pantry', has_door_space: false },
+        ],
+    };
+
+    test('chooses a matching fridge section', () => {
+        expect(pickStoragePlacement(fridge, 'fridge')).toEqual({
+            storage_section_id: 102,
+            is_in_door: false,
+        });
+    });
+
+    test('chooses pantry when the matched item defaults there', () => {
+        expect(pickStoragePlacement(fridge, 'pantry')).toEqual({
+            storage_section_id: 103,
+            is_in_door: false,
+        });
     });
 });
 

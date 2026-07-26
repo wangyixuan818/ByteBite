@@ -242,7 +242,18 @@ export function getActiveFridge(fridges = [], selectedFridgeId = null) {
 
 export function getCurrentFridgeItems(items = [], activeFridge = null) {
     if (!activeFridge) return [];
-    return items.filter(item => !item.fridge_id || Number(item.fridge_id) === Number(activeFridge.id));
+    const activeSectionIds = new Set(
+        (activeFridge.sections ?? [])
+            .map(section => Number(section.id))
+            .filter(Boolean)
+    );
+
+    return items.filter(item => {
+        if (Number(item.fridge_id) === Number(activeFridge.id)) return true;
+        if (item.fridge_id) return false;
+        if (item.storage_section_id && activeSectionIds.has(Number(item.storage_section_id))) return true;
+        return item.storage === 'pantry' && !item.storage_section_id;
+    });
 }
 
 export function getVisibleInventoryItems({

@@ -64,15 +64,16 @@ describe('current fridge selection', () => {
         expect(getActiveFridge(fridges, '999').name).toBe('Kitchen');
     });
 
-    test('filters items to the active fridge while keeping pantry or legacy items', () => {
+    test('filters items to the active fridge while keeping pantry items', () => {
         const items = [
             item(1, { fridge_id: 10 }),
             item(2, { fridge_id: 20 }),
             item(3, { fridge_id: null, storage: 'pantry' }),
             item(4, { storage: 'fridge' }),
+            item(5, { fridge_id: null, storage_section_id: 103, storage: 'pantry' }),
         ];
 
-        expect(getCurrentFridgeItems(items, twoLayerFridge).map(i => i.id)).toEqual([1, 3, 4]);
+        expect(getCurrentFridgeItems(items, twoLayerFridge).map(i => i.id)).toEqual([1, 3, 5]);
     });
 });
 

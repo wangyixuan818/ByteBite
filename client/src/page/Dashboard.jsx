@@ -264,8 +264,6 @@ export default function Dashboard() {
     );
     const allOpenFridgeImage = activeFridgeStateImages['all-open'] ?? activeFridgeVisualizerImage;
     const activeFridgeViewConfig = FRIDGE_VIEW_CONFIG[fridgeView] ?? FRIDGE_VIEW_CONFIG['all-open'];
-    const activeFridgeViewImage =
-        activeFridgeStateImages[fridgeView] ?? allOpenFridgeImage;
     const fridgeHotspotConfigs = hasCompartmentPreview
         ? activeFridgeViewIds
             .map(view => {
@@ -546,13 +544,13 @@ export default function Dashboard() {
     }, []);
 
     useEffect(() => {
-        [allOpenFridgeImage, activeFridgeViewImage, ...Object.values(activeFridgeStateImages)].forEach(src => {
+        [allOpenFridgeImage, ...Object.values(activeFridgeStateImages)].forEach(src => {
             if (!src) return;
             const image = new Image();
             image.src = src;
             image.decode?.().catch(() => {});
         });
-    }, [activeFridgeStateImages, activeFridgeViewImage, allOpenFridgeImage]);
+    }, [activeFridgeStateImages, allOpenFridgeImage]);
 
     useEffect(() => {
         if (!activeInventoryView || fridgeView === 'all-open') return undefined;
@@ -1144,7 +1142,7 @@ export default function Dashboard() {
                             {fridges.map(fridge => {
                                 const isCurrent = String(fridge.id) === String(activeFridge?.id);
                                 const model = getModelById(fridge.model_type);
-                                const fridgeItems = itemList.filter(item => !item.fridge_id || Number(item.fridge_id) === Number(fridge.id));
+                                const fridgeItems = getCurrentFridgeItems(itemList, fridge);
                                 return (
                                     <article className={`fridge-management-card${isCurrent ? ' is-current' : ''}`} key={fridge.id}>
                                         <img src={model.image} alt="" />
@@ -1366,30 +1364,26 @@ export default function Dashboard() {
                         {inventoryOverlayKind === 'visual' && (
                             <div className="inventory-stage-visual">
                                 <div
-                                    className={`fridge-focus-stage ${fridgeView === 'all-open' ? 'is-overview' : 'is-focused'}`}
+                                    className={`fridge-focus-stage fridge-model-${activeFridgeModelType ?? 'two_layered'} ${fridgeView === 'all-open' ? 'is-overview' : 'is-focused'}`}
                                     style={{
                                         '--fridge-view-scale': activeFridgeViewConfig.scale,
                                         '--fridge-view-x': activeFridgeViewConfig.x,
                                         '--fridge-view-y': activeFridgeViewConfig.y,
                                     }}
                                 >
-                                    <button
-                                        className="fridge-focus-return"
-                                        type="button"
-                                        aria-label={fridgeView === 'all-open' ? activeFridgeViewConfig.imageLabel : 'Return to full fridge view'}
-                                        onClick={fridgeView === 'all-open' ? undefined : returnToFullFridgeView}
-                                        disabled={fridgeTransitioning || fridgeView === 'all-open'}
-                                    />
+                                    {fridgeView !== 'all-open' && (
+                                        <button
+                                            className="fridge-focus-return"
+                                            type="button"
+                                            aria-label="Return to full fridge view"
+                                            onClick={returnToFullFridgeView}
+                                            disabled={fridgeTransitioning}
+                                        />
+                                    )}
                                     <div className="fridge-focus-camera">
                                         <img
-                                            className={`fridge-focus-image ${fridgeView === 'all-open' ? 'is-visible' : 'is-muted'}`}
+                                            className="fridge-focus-image is-visible"
                                             src={allOpenFridgeImage}
-                                            alt=""
-                                            draggable="false"
-                                        />
-                                        <img
-                                            className={`fridge-focus-image ${fridgeView === 'all-open' ? 'is-muted' : 'is-visible'}`}
-                                            src={activeFridgeViewImage}
                                             alt=""
                                             draggable="false"
                                         />
