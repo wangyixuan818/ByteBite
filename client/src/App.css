@@ -645,6 +645,399 @@
   font-size: 1.2rem;
   line-height: 1;
 }
+.dashboard-empty-panel {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+.dashboard-retry-panel {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.dashboard-retry-panel h2 {
+  margin: 0;
+  color: #315438;
+  font-family: "Londrina Solid", "Trebuchet MS", "Segoe UI Rounded", system-ui, sans-serif;
+  font-size: clamp(2.1rem, 4vw, 3.2rem);
+  line-height: 1;
+}
+.dashboard-retry-panel p {
+  margin: 0;
+  color: #5f7d55;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.fridge-setup-wizard {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 22px;
+  position: relative;
+  overflow: hidden;
+}
+.fridge-setup-wizard::after {
+  content: "";
+  position: absolute;
+  inset: auto -44px -54px auto;
+  width: 190px;
+  height: 190px;
+  border-radius: 48% 52% 45% 55% / 52% 46% 54% 48%;
+  background: rgba(239, 189, 72, .18);
+  pointer-events: none;
+}
+.wizard-intro,
+.setup-step-content,
+.fridge-setup-join {
+  position: relative;
+  z-index: 1;
+}
+.wizard-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 22px;
+  align-items: start;
+}
+.wizard-intro h2 {
+  margin-bottom: 12px;
+  color: #587f4e;
+  font-family: "Londrina Solid", "Trebuchet MS", "Segoe UI Rounded", system-ui, sans-serif;
+  font-size: clamp(2.8rem, 6vw, 4.8rem);
+  line-height: .92;
+}
+.wizard-intro p:not(.eyebrow),
+.setup-step-content p,
+.fridge-setup-join {
+  color: #5f7d55;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.48;
+}
+.setup-stepper {
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.setup-stepper li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
+  align-items: center;
+  color: #739062;
+  font-weight: 800;
+}
+.setup-stepper span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(83, 112, 76, .18);
+  border-radius: 50%;
+  background: rgba(255, 252, 239, .72);
+}
+.setup-stepper li.is-active {
+  color: #315438;
+}
+.setup-stepper li.is-active span {
+  border-color: rgba(232, 117, 47, .45);
+  background: #f1b851;
+  color: #315438;
+}
+.setup-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.setup-choice-card {
+  min-height: 190px;
+  display: grid;
+  grid-template-columns: minmax(170px, .32fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+  border: 1px solid rgba(83, 112, 76, .18);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(239, 189, 72, .18), transparent 34%),
+    rgba(255, 252, 239, .72);
+  padding: 18px;
+  color: #315438;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.setup-choice-card .storage-combo-icon-tile {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: 132px;
+  height: 108px;
+  justify-content: center;
+  align-content: center;
+  transform: none;
+  transform-origin: center;
+  justify-self: center;
+}
+.setup-choice-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(232, 117, 47, .42);
+  box-shadow: 0 16px 28px rgba(56, 75, 45, .12);
+}
+.setup-choice-card:focus-visible,
+.fridge-model-card:focus-visible {
+  outline: 3px solid rgba(232, 117, 47, .42);
+  outline-offset: 3px;
+}
+.setup-choice-card strong,
+.setup-choice-card small {
+  display: block;
+}
+.setup-choice-card strong {
+  margin-bottom: 7px;
+  font-size: 1.2rem;
+}
+.setup-choice-card small {
+  color: #67835c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: .98rem;
+  line-height: 1.45;
+}
+.setup-code-icon {
+  display: grid;
+  width: 96px;
+  height: 96px;
+  place-items: center;
+  border: 4px solid #285a3d;
+  border-radius: 28% 72% 58% 42% / 48% 38% 62% 52%;
+  background: #f3cd6d;
+  color: #285a3d;
+  font-family: "Londrina Solid", "Trebuchet MS", "Segoe UI Rounded", system-ui, sans-serif;
+  font-size: 2.2rem;
+}
+.setup-copy-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+.setup-copy-row h3,
+.setup-name-step h3 {
+  margin: 0 0 6px;
+  color: #315438;
+  font-family: "Londrina Solid", "Trebuchet MS", "Segoe UI Rounded", system-ui, sans-serif;
+  font-size: clamp(1.9rem, 3vw, 2.7rem);
+  line-height: 1;
+}
+.setup-copy-row p,
+.setup-name-step p {
+  margin: 0;
+}
+.fridge-model-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.fridge-model-card {
+  min-height: 286px;
+  display: grid;
+  grid-template-rows: 128px auto auto;
+  gap: 10px;
+  align-content: start;
+  justify-items: center;
+  border: 1px solid rgba(83, 112, 76, .18);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 52% 38%, rgba(220, 233, 200, .58), transparent 42%),
+    rgba(255, 252, 239, .74);
+  padding: 14px;
+  color: #315438;
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.fridge-model-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(232, 117, 47, .44);
+  box-shadow: 0 16px 28px rgba(56, 75, 45, .12);
+}
+.fridge-model-art {
+  display: grid;
+  width: 100%;
+  height: 128px;
+  place-items: center;
+  overflow: hidden;
+}
+.fridge-model-art img {
+  width: auto;
+  height: auto;
+  max-width: 84%;
+  max-height: 120px;
+  object-fit: contain;
+}
+.fridge-model-card strong,
+.fridge-model-card small {
+  display: block;
+}
+.fridge-model-card strong {
+  font-size: 1rem;
+}
+.fridge-model-card small {
+  color: #67835c;
+  line-height: 1.35;
+}
+.setup-join-step {
+  display: grid;
+  gap: 16px;
+}
+.setup-sections-grid,
+.setup-name-step {
+  display: grid;
+  grid-template-columns: minmax(220px, .42fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.selected-fridge-preview {
+  min-height: 380px;
+  display: grid;
+  place-items: center;
+  border-radius: 48% 52% 45% 55% / 54% 45% 55% 46%;
+  background:
+    radial-gradient(circle at 45% 35%, rgba(255, 255, 247, .9), transparent 42%),
+    rgba(220, 233, 200, .55);
+}
+.selected-fridge-preview img {
+  width: min(88%, 310px);
+  max-height: 330px;
+  object-fit: contain;
+}
+.selected-fridge-preview span {
+  align-self: start;
+  color: #587f4e;
+  font-weight: 800;
+}
+.selected-fridge-preview.is-compact {
+  min-height: 290px;
+}
+.section-customizer {
+  display: grid;
+  gap: 14px;
+}
+.guide-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(83, 112, 76, .22);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .76);
+  color: #416f3f;
+  padding: 9px 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.guide-button > span {
+  font-weight: 800;
+}
+.storage-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.storage-guide article {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .68);
+  padding: 12px;
+}
+.storage-guide strong {
+  color: #315438;
+}
+.storage-guide span {
+  color: #d16c31;
+  font-weight: 900;
+}
+.storage-guide small {
+  color: #67835c;
+  line-height: 1.35;
+}
+.section-draft-list {
+  display: grid;
+  gap: 10px;
+}
+.section-draft-card {
+  display: grid;
+  grid-template-columns: minmax(130px, .7fr) minmax(160px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .70);
+  padding: 12px;
+}
+.section-draft-card strong,
+.section-draft-card small {
+  display: block;
+}
+.section-draft-card strong {
+  color: #315438;
+}
+.section-draft-card small {
+  margin-top: 3px;
+  color: #67835c;
+}
+.section-draft-card label,
+.setup-name-step label {
+  display: grid;
+  gap: 6px;
+  color: #315438;
+  font-weight: 800;
+}
+.section-draft-card select,
+.setup-name-step input {
+  border: 1px solid rgba(83, 112, 76, .26);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .92);
+  color: #315438;
+  min-height: 42px;
+  padding: 9px 10px;
+}
+.door-storage-toggle {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  white-space: nowrap;
+}
+.door-storage-toggle input {
+  width: 18px;
+  min-height: 18px;
+}
+.setup-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.setup-summary span {
+  border: 1px solid rgba(83, 112, 76, .18);
+  border-radius: 999px;
+  background: rgba(220, 233, 200, .58);
+  color: #416f3f;
+  padding: 7px 10px;
+  font-size: .9rem;
+  font-weight: 800;
+}
+.fridge-setup-join {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .62);
+  padding: 14px;
+}
+.fridge-setup-join label {
+  color: #315438;
+  font-weight: 800;
+}
 .fridge-panel { display: flex; flex-direction: column; gap: 16px; }
 .fridge-visual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .fridge-mode-toggle {
@@ -824,13 +1217,47 @@
 .visual-inventory-entry {
   min-height: 260px;
   align-items: center;
+  justify-content: center;
   background:
     radial-gradient(circle at 50% 16%, rgba(239, 189, 72, .20), transparent 26%),
     linear-gradient(145deg, rgba(255, 250, 232, .96), rgba(220, 233, 200, .82));
 }
+.fridge-visualizer-image {
+  display: block;
+  width: min(92%, 620px);
+  max-height: 360px;
+  object-fit: contain;
+  border-radius: 6px;
+}
 .visual-inventory-entry:hover .storage-combo-icon-hero {
   transform: scale(1.035) rotate(-1deg);
   filter: saturate(1.06);
+}
+.visual-inventory-entry:hover .fridge-visualizer-image {
+  transform: scale(1.015) rotate(-.4deg);
+  filter: saturate(1.04);
+}
+.storage-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 0;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 999px;
+  background: rgba(255, 252, 239, .72);
+  color: #5f7d55;
+  padding: 7px 11px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: .92rem;
+}
+.storage-legend span {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #315438;
+  border-radius: 5px;
+  background: linear-gradient(145deg, rgba(255, 249, 223, .96), rgba(239, 189, 72, .58));
+  flex: 0 0 auto;
 }
 .alert-panel {
   display: flex;
@@ -1332,6 +1759,313 @@
 .inventory-filter-button:disabled {
     opacity: .55;
     cursor: default;
+}
+.inventory-stage-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  padding: clamp(22px, 5vw, 64px);
+  background:
+    radial-gradient(circle at 18% 26%, rgba(239, 189, 72, .20), transparent 30%),
+    rgba(31, 39, 29, .64);
+  backdrop-filter: blur(12px) saturate(.9);
+  animation: inventoryBackdropIn .22s ease both;
+}
+.inventory-stage {
+  min-height: calc(100vh - clamp(44px, 10vw, 128px));
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: grid;
+  align-items: center;
+  gap: clamp(28px, 6vw, 72px);
+}
+.inventory-stage.has-visualizer {
+  width: min(1360px, 100%);
+  grid-template-columns: minmax(360px, .85fr) minmax(540px, 1.15fr);
+  gap: clamp(72px, 8vw, 128px);
+}
+.inventory-stage.is-list-only {
+  width: min(860px, 100%);
+  grid-template-columns: 1fr;
+}
+.inventory-stage.is-list-only .inventory-stage-content {
+  width: 100%;
+  justify-self: center;
+}
+.inventory-stage-visual {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  color: #f9f3d7;
+  pointer-events: auto;
+  user-select: none;
+}
+.fridge-focus-stage {
+  position: relative;
+  width: min(36vw, 430px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+  cursor: default;
+}
+.inventory-stage.is-shared-opening .fridge-focus-stage {
+  animation: fridgeSharedElementIn 680ms cubic-bezier(.22, 1, .36, 1) both;
+}
+.fridge-focus-stage.is-focused {
+  cursor: zoom-out;
+}
+.fridge-focus-camera {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(var(--fridge-view-x, 0%), var(--fridge-view-y, 0%), 0) scale(var(--fridge-view-scale, 1));
+  transform-origin: center center;
+  transition: transform 620ms cubic-bezier(.22, 1, .36, 1);
+  will-change: transform;
+}
+.fridge-focus-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 32px 44px rgba(10, 16, 10, .34));
+  transition: opacity 180ms ease;
+  will-change: opacity;
+}
+.fridge-focus-image.is-visible {
+  opacity: 1;
+}
+.fridge-focus-image.is-muted {
+  opacity: 0;
+}
+.fridge-hotspot {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  cursor: zoom-in;
+  color: #fff8df;
+  font-family: var(--font-heading);
+  font-size: .74rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+  text-shadow: 0 1px 8px rgba(22, 43, 30, .72);
+  transition: opacity .16s ease, transform .18s ease;
+}
+.fridge-hotspot::before {
+  content: "";
+  position: absolute;
+  left: var(--hotspot-marker-left, 50%);
+  top: var(--hotspot-marker-top, 50%);
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255, 248, 223, .92);
+  border-radius: 50%;
+  background: #f1b851;
+  box-shadow:
+    0 0 0 5px rgba(34, 83, 54, .42),
+    0 12px 22px rgba(12, 27, 18, .26);
+  transform: translate(-50%, -50%);
+}
+.fridge-hotspot span {
+  position: absolute;
+  top: calc(var(--hotspot-marker-top, 50%) + 17px);
+  left: var(--hotspot-marker-left, 50%);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(34, 83, 54, .82);
+  padding: 6px 9px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.fridge-hotspot:hover,
+.fridge-hotspot:focus-visible {
+  opacity: 1;
+  transform: scale(1.04);
+  outline: 0;
+}
+.fridge-focus-return {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 0;
+  background: transparent;
+  cursor: zoom-out;
+}
+.fridge-focus-return:disabled {
+  pointer-events: none;
+}
+.storage-combo-icon-expanded {
+  width: min(34vw, 320px);
+  height: min(42vw, 360px);
+  transform-origin: left center;
+  animation: storageComboExpand .44s cubic-bezier(.2, 0, 0, 1) both;
+  filter: drop-shadow(0 32px 44px rgba(10, 16, 10, .34));
+}
+.storage-combo-icon-expanded .storage-combo-fridge {
+  width: min(18vw, 168px);
+  height: min(34vw, 310px);
+  border-width: 5px;
+  border-radius: 28px 28px 18px 18px;
+  padding: clamp(24px, 4vw, 42px) clamp(18px, 3vw, 30px);
+}
+.storage-combo-icon-expanded .storage-combo-pantry {
+  width: min(14vw, 132px);
+  height: min(27vw, 245px);
+  border-width: 5px;
+  border-radius: 28px 28px 16px 16px;
+  padding: clamp(20px, 3vw, 34px) clamp(16px, 2vw, 24px);
+}
+.fridge-visualizer-image-expanded {
+  display: block;
+  width: min(38vw, 390px);
+  max-height: min(54vh, 430px);
+  object-fit: contain;
+  transform-origin: left center;
+  animation: storageComboExpand .44s cubic-bezier(.2, 0, 0, 1) both;
+  filter: drop-shadow(0 32px 44px rgba(10, 16, 10, .34));
+}
+.inventory-stage-content {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  min-width: 0;
+  max-height: calc(100vh - 96px);
+}
+.inventory-stage-content > .section-heading,
+.inventory-stage-content > .inventory-search,
+.inventory-stage-content > .inventory-filters,
+.inventory-stage-content > .inventory-results,
+.inventory-stage-content > .empty-state {
+  animation: inventoryCardIn .34s cubic-bezier(.2, 0, 0, 1) both;
+}
+.inventory-stage-content > .section-heading {
+  margin: 0;
+  color: #fff8df;
+  animation-delay: .10s;
+}
+.inventory-stage-content > .section-heading h2,
+.inventory-stage-content > .section-heading .eyebrow {
+  color: inherit;
+}
+.inventory-stage-content > .inventory-search {
+  animation-delay: .16s;
+}
+.inventory-stage-content > .inventory-filters,
+.inventory-stage-content > .empty-state {
+  animation-delay: .20s;
+}
+.inventory-stage-content .item-list {
+  max-height: min(58vh, 600px);
+  overflow: auto;
+  padding: 2px 10px 8px 2px;
+}
+.inventory-results {
+  min-height: 142px;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.inventory-results-leaving {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.inventory-results-entering,
+.inventory-results-entered {
+  opacity: 1;
+  transform: translateY(0);
+}
+.inventory-stage-content .item-card {
+  animation: inventoryCardIn .38s cubic-bezier(.2, 0, 0, 1) both;
+}
+.inventory-stage-content .item-card:nth-child(1) { animation-delay: .18s; }
+.inventory-stage-content .item-card:nth-child(2) { animation-delay: .23s; }
+.inventory-stage-content .item-card:nth-child(3) { animation-delay: .28s; }
+.inventory-stage-content .item-card:nth-child(4) { animation-delay: .33s; }
+.inventory-stage-content .item-card:nth-child(5) { animation-delay: .38s; }
+.inventory-stage-content .item-card:nth-child(6) { animation-delay: .43s; }
+.inventory-stage-content .item-card:nth-child(7) { animation-delay: .48s; }
+.inventory-stage-content .item-card:nth-child(8) { animation-delay: .53s; }
+.inventory-stage-content .item-card:nth-child(n+9) { animation-delay: .58s; }
+.inventory-stage-close {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  z-index: 2;
+}
+.inventory-modal { width: min(1120px, 100%); }
+.add-food-modal { width: min(720px, 100%); }
+.fridge-management-modal {
+  width: min(760px, 100%);
+}
+.create-fridge-modal {
+  width: min(980px, 100%);
+}
+.fridge-management-list {
+  display: grid;
+  gap: 12px;
+}
+.fridge-management-card {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .72);
+  padding: 12px;
+}
+.fridge-management-card.is-current {
+  border-color: rgba(232, 117, 47, .42);
+  background:
+    radial-gradient(circle at 12% 24%, rgba(239, 189, 72, .16), transparent 34%),
+    rgba(255, 247, 232, .90);
+}
+.fridge-management-card img {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+}
+.fridge-management-card strong,
+.fridge-management-card small {
+  display: block;
+}
+.fridge-management-card strong {
+  color: #315438;
+  font-size: 1.08rem;
+}
+.fridge-management-card small {
+  margin-top: 3px;
+  color: #67835c;
+}
+.fridge-management-card span {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: rgba(49, 84, 56, .12);
+  color: #315438;
+  padding: 5px 8px;
+  font-size: .82rem;
+  font-weight: 900;
+}
+.fridge-management-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.create-fridge-stepper {
+  margin-bottom: 18px;
 }
 .inventory-stage-backdrop {
   position: fixed;
@@ -2264,6 +2998,378 @@
   align-items: center;
   gap: 7px;
 }
+.profile-page > .profile-hero,
+.profile-page > .profile-layout {
+  width: min(1100px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+.profile-hero {
+  padding: clamp(34px, 7vh, 58px) 0 24px;
+}
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 4vw, 30px);
+}
+.profile-avatar {
+  width: clamp(104px, 18vw, 148px);
+  height: clamp(104px, 18vw, 148px);
+  flex: 0 0 auto;
+  border: 4px solid rgba(255, 250, 232, .92);
+  border-radius: 42% 58% 54% 46% / 52% 46% 54% 48%;
+  object-fit: cover;
+  box-shadow: 0 18px 30px rgba(56, 75, 45, .15);
+}
+.profile-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 247, .92), transparent 34%),
+    linear-gradient(145deg, #efbd48, #e8752f);
+  color: #315438;
+  font-family: "Londrina Solid", "Trebuchet MS", system-ui, sans-serif;
+  font-size: clamp(2.4rem, 8vw, 4.2rem);
+  line-height: 1;
+}
+.profile-identity h1 {
+  margin-bottom: 10px;
+}
+.profile-identity p:not(.eyebrow) {
+  color: #5f7d55;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.profile-edit-button {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, .82fr) minmax(0, 1.18fr);
+  gap: 22px;
+  align-items: start;
+}
+.household-actions-panel,
+.household-detail-panel {
+  display: grid;
+  gap: 18px;
+}
+.household-mini-form,
+.rename-household-form,
+.profile-edit-form {
+  display: grid;
+  gap: 8px;
+}
+.household-mini-form label,
+.rename-household-form label,
+.profile-edit-form label {
+  color: #315438;
+  font-weight: 800;
+}
+.household-inline-control {
+  display: flex;
+  gap: 10px;
+}
+.household-inline-control input {
+  min-width: 0;
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid rgba(83, 112, 76, .36);
+  border-radius: 6px;
+  background: rgba(255, 255, 247, .88);
+  color: #234c35;
+  padding: 10px 12px;
+}
+.household-inline-control input:focus {
+  outline: 3px solid rgba(132, 160, 119, .26);
+  border-color: #6d8f61;
+}
+.profile-edit-form input,
+.rename-household-form > input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(83, 112, 76, .36);
+  border-radius: 6px;
+  background: rgba(255, 255, 247, .88);
+  color: #234c35;
+  padding: 10px 12px;
+}
+.profile-edit-form input:focus,
+.rename-household-form > input:focus {
+  outline: 3px solid rgba(132, 160, 119, .26);
+  border-color: #6d8f61;
+}
+.household-inline-control .button,
+.household-detail-heading .button,
+.household-danger-zone .button,
+.invite-code-box .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.household-list {
+  display: grid;
+  gap: 10px;
+}
+.household-card {
+  width: 100%;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(83, 112, 76, .20);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .68);
+  color: #315438;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.household-card:hover,
+.household-card.is-selected {
+  border-color: rgba(232, 117, 47, .42);
+  background:
+    radial-gradient(circle at 92% 14%, rgba(239, 189, 72, .20), transparent 30%),
+    rgba(255, 247, 232, .90);
+}
+.household-card strong,
+.household-card small {
+  display: block;
+}
+.household-card strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 3px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+}
+.household-card small {
+  color: #67835c;
+}
+.household-card-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 43% 57% 47% 53% / 52% 44% 56% 48%;
+  background: rgba(220, 233, 200, .76);
+  color: #416f3f;
+}
+.household-detail-heading {
+  align-items: flex-start;
+}
+.current-household-badge,
+.current-household-title-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid rgba(65, 111, 63, .20);
+  border-radius: 999px;
+  background: rgba(220, 233, 200, .82);
+  color: #416f3f;
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.current-household-badge {
+  padding: 3px 8px;
+  font-size: .72rem;
+}
+.current-household-title-badge {
+  margin-left: 10px;
+  padding: 5px 10px;
+  vertical-align: middle;
+  font-size: .78rem;
+}
+.member-section {
+  display: grid;
+  gap: 12px;
+}
+.member-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #315438;
+}
+.member-section-title h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+.member-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.member-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .66);
+  padding: 10px 12px;
+}
+.member-list strong,
+.member-list small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.member-list strong {
+  color: #315438;
+}
+.member-list small {
+  margin-top: 2px;
+  color: #67835c;
+}
+.member-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 45% 55% 49% 51% / 54% 46% 54% 46%;
+  object-fit: cover;
+}
+.member-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: rgba(239, 189, 72, .72);
+  color: #315438;
+  font-weight: 900;
+}
+.household-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(166, 63, 63, .20);
+  border-radius: 8px;
+  background: rgba(255, 240, 238, .48);
+  padding: 14px;
+}
+.household-switch-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(65, 111, 63, .18);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 94% 18%, rgba(239, 189, 72, .18), transparent 34%),
+    rgba(220, 233, 200, .42);
+  padding: 14px;
+}
+.household-switch-zone strong {
+  display: block;
+  color: #315438;
+  margin-bottom: 4px;
+}
+.household-switch-zone p {
+  margin: 0;
+  color: #67835c;
+  line-height: 1.42;
+}
+.household-danger-zone strong {
+  display: block;
+  color: #8f3434;
+  margin-bottom: 4px;
+}
+.household-danger-zone p,
+.invite-code-helper {
+  margin: 0;
+  color: #67835c;
+  line-height: 1.42;
+}
+.invite-code-modal {
+  width: min(520px, 100%);
+}
+.profile-edit-modal,
+.rename-household-modal {
+  width: min(520px, 100%);
+}
+.profile-edit-form .button-row,
+.rename-household-form .button-row {
+  margin-top: 10px;
+}
+.profile-picture-upload {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-top: 8px;
+  border: 1px solid rgba(83, 112, 76, .16);
+  border-radius: 8px;
+  background: rgba(255, 252, 239, .58);
+  padding: 12px;
+}
+.profile-picture-preview {
+  width: 84px;
+  height: 84px;
+  border-radius: 42% 58% 54% 46% / 52% 46% 54% 48%;
+  object-fit: cover;
+  box-shadow: 0 10px 18px rgba(56, 75, 45, .13);
+}
+.profile-picture-preview-empty {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 247, .92), transparent 34%),
+    linear-gradient(145deg, #efbd48, #e8752f);
+  color: #315438;
+  font-family: "Londrina Solid", "Trebuchet MS", system-ui, sans-serif;
+  font-size: 2rem;
+}
+.profile-picture-upload input[type="file"] {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.profile-picture-picker {
+  cursor: pointer;
+}
+.profile-picture-error {
+  margin-top: 8px;
+  color: #8f3434;
+}
+.invite-code-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 12px;
+  border: 1px solid rgba(232, 117, 47, .24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 12% 24%, rgba(239, 189, 72, .22), transparent 36%),
+    rgba(255, 252, 239, .82);
+  padding: 14px;
+}
+.invite-code-box span {
+  min-width: 0;
+  flex: 1;
+  color: #315438;
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-size: clamp(1.45rem, 7vw, 2rem);
+  font-weight: 900;
+  letter-spacing: .08em;
+  overflow-wrap: anywhere;
+}
+.regenerate-code-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
 .recipe-detail {
   margin-top: 8px;
   max-width: 900px;
@@ -2338,6 +3444,42 @@
 }
 @media (max-width: 760px) {
   .landing-grid, .dashboard-grid, .recipe-list { grid-template-columns: 1fr; }
+  .wizard-intro,
+  .setup-sections-grid,
+  .setup-name-step {
+    grid-template-columns: 1fr;
+  }
+  .setup-stepper {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+  }
+  .setup-stepper li {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    font-size: .86rem;
+  }
+  .fridge-model-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .setup-choice-grid {
+    grid-template-columns: 1fr;
+  }
+  .setup-copy-row {
+    flex-direction: column;
+  }
+  .storage-guide {
+    grid-template-columns: 1fr;
+  }
+  .section-draft-card {
+    grid-template-columns: 1fr;
+  }
+  .door-storage-toggle {
+    grid-template-columns: auto 1fr;
+  }
+  .selected-fridge-preview {
+    min-height: 260px;
+  }
   .profile-layout {
     grid-template-columns: 1fr;
   }
@@ -2427,6 +3569,40 @@
 }
 @media (max-width: 480px) {
   .form-row, .preview-card { grid-template-columns: 1fr; }
+  .fridge-model-grid {
+    grid-template-columns: 1fr;
+  }
+  .fridge-model-card {
+    min-height: 250px;
+    grid-template-rows: 112px auto auto;
+  }
+  .fridge-model-art {
+    height: 112px;
+  }
+  .fridge-model-art img {
+    max-height: 104px;
+  }
+  .setup-choice-card {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+  .setup-choice-card .storage-combo-icon-tile {
+    justify-self: start;
+  }
+  .fridge-management-card {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .fridge-management-card img {
+    width: 58px;
+    height: 58px;
+  }
+  .fridge-management-card .button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .fridge-management-actions {
+    flex-direction: column;
+  }
   .item-main { flex-direction: column; gap: 10px; }
   .estimate-expiry-card {
     grid-template-columns: auto minmax(0, 1fr);
@@ -2726,3 +3902,127 @@
     animation: qa-pulse 1s ease-in-out infinite;
 }
 @keyframes qa-pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+@keyframes inventoryBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes storageComboExpand {
+  from {
+    opacity: .24;
+    transform: translateX(-32px) scale(.32);
+  }
+  64% {
+    opacity: 1;
+    transform: translateX(0) scale(1.035);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes fridgeSharedElementIn {
+  from {
+    opacity: .38;
+    transform: translate3d(-160px, -28px, 0) scale(.58);
+  }
+  58% {
+    opacity: 1;
+    transform: translate3d(8px, 0, 0) scale(1.025);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes inventoryCardIn {
+  from {
+    opacity: 0;
+    transform: translateX(22px) scale(.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-stage-backdrop,
+  .inventory-stage.is-shared-opening .fridge-focus-stage,
+  .storage-combo-icon-expanded,
+  .fridge-visualizer-image-expanded,
+  .fridge-focus-camera,
+  .fridge-focus-image,
+  .inventory-stage-content > .section-heading,
+  .inventory-stage-content > .inventory-search,
+  .inventory-stage-content > .inventory-filters,
+  .inventory-stage-content > .empty-state,
+  .inventory-stage-content .item-card {
+    animation: none;
+    transition-duration: 1ms;
+  }
+}
+
+@media (max-width: 1180px) {
+  .inventory-stage.has-visualizer {
+    width: min(1060px, 100%);
+    grid-template-columns: minmax(300px, .82fr) minmax(0, 1.18fr);
+    gap: clamp(44px, 6vw, 72px);
+  }
+  .fridge-focus-stage {
+    width: min(34vw, 360px);
+  }
+}
+
+@media (max-width: 760px) {
+  .inventory-stage-backdrop {
+    padding: 18px;
+  }
+  .inventory-stage {
+    min-height: calc(100vh - 36px);
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+  }
+  .inventory-stage-visual {
+    justify-items: start;
+  }
+  .fridge-focus-stage {
+    width: min(72vw, 280px);
+  }
+  .storage-combo-icon-expanded {
+    width: 142px;
+    height: 154px;
+  }
+  .storage-combo-icon-expanded .storage-combo-fridge {
+    width: 80px;
+    height: 142px;
+    border-width: 4px;
+    border-radius: 20px 20px 14px 14px;
+    padding: 20px 15px;
+  }
+  .storage-combo-icon-expanded .storage-combo-pantry {
+    width: 66px;
+    height: 112px;
+    border-width: 4px;
+    border-radius: 20px 20px 12px 12px;
+    padding: 16px 12px;
+  }
+  .fridge-visualizer-image-expanded {
+    width: min(72vw, 260px);
+    max-height: 220px;
+  }
+  .inventory-stage-content {
+    max-height: none;
+  }
+  .inventory-stage-content .item-list {
+    max-height: none;
+    overflow: visible;
+  }
+  .inventory-stage-close {
+    top: 0;
+    right: 0;
+  }
+}
