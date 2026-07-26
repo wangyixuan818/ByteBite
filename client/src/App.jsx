@@ -8,6 +8,7 @@ import LandingPage from './page/LandingPage'
 import SuggestionPage from './page/SuggestionPage'
 import RecipeDetailPage from './page/RecipeDetailPage'
 import ProfilePage from './page/ProfilePage'
+import QuickAddAssistant from './components/QuickAddAssistant'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path='/dashboard/recipes' element={<SuggestionPage />} />
         <Route path='/dashboard/recipes/:id' element={<RecipeDetailPage />} />
       </Route>
+    <QuickAddAssistant />
     </Routes>
   )
 }

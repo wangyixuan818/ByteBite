@@ -59,3 +59,13 @@ export const updateItem = (id, data) => {
 export const deleteItem = (id) => {
     return client.delete(`/api/v1/items/${id}`, activeHouseholdConfig());
 }
+
+export const consumeItem = (id, quantity) => {
+    const headers = getAuthHeader();
+    return client.post(`/api/v1/items/${id}/consume`, quantity != null ? { quantity } : {}, { headers });
+};
+
+export const disposeItem = (id, quantity) => {
+    const headers = getAuthHeader();
+    return client.post(`/api/v1/items/${id}/dispose`, quantity != null ? { quantity } : {}, { headers });
+};
