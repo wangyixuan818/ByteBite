@@ -1900,6 +1900,9 @@
     border-radius: 999px;
     background: #7f9c6d; color: #fdfbf0; font-size: .9rem;
 }
+.ingredient-bubble.not-owned {
+    background: #b8860b;   /* dark goldenrod / dark yellow */
+}
 .ingredient-bubble button {
     display: inline-flex; align-items: center; justify-content: center;
     width: 18px; height: 18px;
