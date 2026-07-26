@@ -12,6 +12,18 @@ import NotificationInbox from '../components/NotificationInbox';
 import BrandTitle from '../components/BrandTitle';
 import { searchByName } from '../utils/text';
 import { getCurrentHouseholdId, setCurrentHouseholdId } from '../utils/currentHousehold';
+import {
+    FRIDGE_MODEL_SECTIONS,
+    FRIDGE_VIEW_CONFIG,
+    STORAGE_SECTIONS,
+    STORAGE_TYPE_OPTIONS,
+    TWO_LAYERED_COMPARTMENT_VIEWS,
+    buildSectionDrafts,
+    getActiveFridge,
+    getCurrentFridgeItems,
+    getStorageTypeLabel,
+    getVisibleInventoryItems,
+} from '../utils/fridgeVisualizer';
 import twoLayeredFridgeImage from '../assets/bytebite-ui-v2/fridges/two-layered-closed.png';
 import threeLayeredFridgeImage from '../assets/bytebite-ui-v2/fridges/three-layered-closed.png';
 import miniFridgeImage from '../assets/bytebite-ui-v2/fridges/mini-closed.png';
@@ -31,25 +43,11 @@ const EXPIRY_STATUSES = new Set([
     'expiring_this_week',
 ]);
 
-const STORAGE_SECTIONS = [
-    { id: 'fridge', label: 'Fridge main', storageValues: ['fridge'] },
-    { id: 'fresh-zone', label: 'Fresh zone', storageValues: ['fresh zone'] },
-    { id: 'fridge-door', label: 'Fridge door', storageValues: ['fridge door'] },
-    { id: 'freezer', label: 'Freezer', storageValues: ['freezer'] },
-    { id: 'pantry', label: 'Pantry', storageValues: ['pantry'] },
-];
-
 const EXPIRY_FILTERS = [
     { id: 'expired', label: 'Expired', statuses: ['expired'] },
     { id: 'expiring', label: 'Expiring soon', statuses: ['expiring_today', 'expiring_soon', 'expiring_this_week'] },
     { id: 'fresh', label: 'Fresh', statuses: ['ok'] },
     { id: 'no_date', label: 'No date', statuses: ['no_date'] },
-];
-
-const STORAGE_TYPE_OPTIONS = [
-    { id: 'fridge', label: 'Fridge', temperature: '0-4 C', examples: 'Milk, leftovers, sauces' },
-    { id: 'fresh_zone', label: 'Fresh zone', temperature: 'Around 0 C', examples: 'Meat, fish, leafy greens' },
-    { id: 'freezer', label: 'Freezer', temperature: 'Below -18 C', examples: 'Frozen meals, dumplings, ice cream' },
 ];
 
 const CURRENT_FRIDGE_KEY = 'bytebite-current-fridge-id';
@@ -72,40 +70,28 @@ const FRIDGE_MODELS = [
         label: 'Two-layer fridge',
         detail: 'A freezer above a larger fridge section.',
         image: twoLayeredFridgeImage,
-        sections: [
-            { section_key: 'upper', name: 'Upper section', section_type: 'freezer', has_door_space: true },
-            { section_key: 'lower', name: 'Lower section', section_type: 'fridge', has_door_space: true },
-        ],
+        sections: FRIDGE_MODEL_SECTIONS.two_layered,
     },
     {
         id: 'three_layered',
         label: 'Three-layer fridge',
         detail: 'Three door sections for chilled, fresh, and frozen food.',
         image: threeLayeredFridgeImage,
-        sections: [
-            { section_key: 'upper', name: 'Upper section', section_type: 'fridge', has_door_space: true },
-            { section_key: 'middle', name: 'Middle section', section_type: 'fresh_zone', has_door_space: true },
-            { section_key: 'lower', name: 'Lower section', section_type: 'freezer', has_door_space: true },
-        ],
+        sections: FRIDGE_MODEL_SECTIONS.three_layered,
     },
     {
         id: 'mini',
         label: 'Mini fridge',
         detail: 'One compact section for drinks and small groceries.',
         image: miniFridgeImage,
-        sections: [
-            { section_key: 'main', name: 'Main section', section_type: 'fridge', has_door_space: true },
-        ],
+        sections: FRIDGE_MODEL_SECTIONS.mini,
     },
     {
         id: 'side_by_side',
         label: 'Side-by-side fridge',
         detail: 'Freezer and fridge sections next to each other.',
         image: sideBySideFridgeImage,
-        sections: [
-            { section_key: 'left', name: 'Left section', section_type: 'freezer', has_door_space: true },
-            { section_key: 'right', name: 'Right section', section_type: 'fridge', has_door_space: true },
-        ],
+        sections: FRIDGE_MODEL_SECTIONS.side_by_side,
     },
 ];
 
@@ -127,83 +113,8 @@ const FRIDGE_STATE_IMAGES = {
     },
 };
 
-const FRIDGE_VIEW_CONFIG = {
-    'all-open': {
-        scale: 1,
-        x: '0%',
-        y: '0%',
-        inventoryLocation: null,
-        label: 'Full inventory',
-        imageLabel: 'Full open fridge and pantry',
-    },
-    'upper-door': {
-        scale: 1.72,
-        x: '13%',
-        y: '10%',
-        inventoryLocation: 'upper-door',
-        sectionKey: 'upper',
-        isDoor: true,
-        label: 'Upper door',
-        imageLabel: 'Upper fridge door',
-        hotspot: { left: '16%', top: '13%', width: '17%', height: '24%', markerLeft: '46%', markerTop: '53%' },
-    },
-    'upper-fridge': {
-        scale: 1.68,
-        x: '-13%',
-        y: '11%',
-        inventoryLocation: 'upper-fridge',
-        sectionKey: 'upper',
-        isDoor: false,
-        label: 'Upper section',
-        imageLabel: 'Upper fridge section',
-        hotspot: { left: '33%', top: '13%', width: '26%', height: '25%', markerLeft: '41%', markerTop: '52%' },
-    },
-    'lower-door': {
-        scale: 1.55,
-        x: '18%',
-        y: '-16%',
-        inventoryLocation: 'lower-door',
-        sectionKey: 'lower',
-        isDoor: true,
-        label: 'Lower door',
-        imageLabel: 'Lower fridge door',
-        hotspot: { left: '16%', top: '43%', width: '19%', height: '36%', markerLeft: '34%', markerTop: '38%' },
-    },
-    'lower-fridge': {
-        scale: 1.56,
-        x: '-11%',
-        y: '-15%',
-        inventoryLocation: 'lower-fridge',
-        sectionKey: 'lower',
-        isDoor: false,
-        label: 'Lower section',
-        imageLabel: 'Lower fridge section',
-        hotspot: { left: '34%', top: '44%', width: '25%', height: '35%', markerLeft: '37%', markerTop: '37%' },
-    },
-    pantry: {
-        scale: 1.55,
-        x: '-33%',
-        y: '-6%',
-        inventoryLocation: 'pantry',
-        storage: 'pantry',
-        label: 'Pantry',
-        imageLabel: 'Pantry shelf',
-        hotspot: { left: '61%', top: '33%', width: '17%', height: '46%', markerLeft: '47%', markerTop: '38%' },
-    },
-};
-
-const TWO_LAYERED_COMPARTMENT_VIEWS = ['upper-fridge', 'upper-door', 'lower-fridge', 'lower-door', 'pantry'];
-
 function getModelById(modelId) {
     return FRIDGE_MODELS.find(model => model.id === modelId) || FRIDGE_MODELS[0];
-}
-
-function buildSectionDrafts(modelId) {
-    return getModelById(modelId).sections.map(section => ({ ...section }));
-}
-
-function getStorageTypeLabel(typeId) {
-    return STORAGE_TYPE_OPTIONS.find(option => option.id === typeId)?.label || typeId;
 }
 
 function StorageComboIcon({ className = '' }) {
@@ -292,11 +203,9 @@ export default function Dashboard() {
 
     const hasFridge = fridges.length > 0;
     const selectedFridgeModel = useMemo(() => getModelById(fridgeModel), [fridgeModel]);
-    const activeFridge = fridges.find(fridge => String(fridge.id) === String(selectedFridgeId)) ?? fridges[0] ?? null;
+    const activeFridge = getActiveFridge(fridges, selectedFridgeId);
     const currentFridgeItems = useMemo(
-        () => activeFridge
-            ? itemList.filter(item => !item.fridge_id || Number(item.fridge_id) === Number(activeFridge.id))
-            : [],
+        () => getCurrentFridgeItems(itemList, activeFridge),
         [activeFridge, itemList]
     );
     const expiringItems = useMemo(
@@ -326,29 +235,14 @@ export default function Dashboard() {
         ? TWO_LAYERED_COMPARTMENT_VIEWS.map(view => ({ id: view, ...FRIDGE_VIEW_CONFIG[view] }))
         : [];
 
-    const visibleInventoryItems = useMemo(() => {
-        if (activeInventoryView === 'item' && focusedInventoryItemId) {
-            return currentFridgeItems.filter(item => item.id === focusedInventoryItemId);
-        }
-        if (activeFridgeViewConfig.inventoryLocation) {
-            if (activeFridgeViewConfig.storage) {
-                return currentFridgeItems.filter(item => item.storage === activeFridgeViewConfig.storage);
-            }
-            const focusedSection = activeFridge?.sections?.find(
-                section => section.section_key === activeFridgeViewConfig.sectionKey
-            );
-            return currentFridgeItems.filter(item => {
-                const itemSectionId = Number(item.storage_section_id);
-                const focusedSectionId = Number(focusedSection?.id);
-                if (focusedSectionId) {
-                    return itemSectionId === focusedSectionId && Boolean(item.is_in_door) === activeFridgeViewConfig.isDoor;
-                }
-                return Boolean(item.is_in_door) === activeFridgeViewConfig.isDoor;
-            });
-        }
-        if (!activeInventoryView || activeInventoryView === 'all') return currentFridgeItems;
-        return currentFridgeItems.filter(item => activeSection?.storageValues.includes(item.storage));
-    }, [activeFridge?.sections, activeFridgeViewConfig, activeInventoryView, activeSection, currentFridgeItems, focusedInventoryItemId]);
+    const visibleInventoryItems = useMemo(() => getVisibleInventoryItems({
+        currentFridgeItems,
+        activeInventoryView,
+        activeSection,
+        activeFridge,
+        activeFridgeViewConfig,
+        focusedInventoryItemId,
+    }), [activeFridge, activeFridgeViewConfig, activeInventoryView, activeSection, currentFridgeItems, focusedInventoryItemId]);
 
     const filteredInventoryItems = useMemo(() => {
         // expand the selected expiry buckets into the raw statuses they cover
