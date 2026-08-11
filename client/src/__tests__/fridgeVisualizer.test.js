@@ -5,6 +5,8 @@ import {
     buildSectionDrafts,
     getActiveFridge,
     getCurrentFridgeItems,
+    getFridgeHotspotConfigs,
+    getFridgeViewConfig,
     getStorageTypeLabel,
     getVisibleInventoryItems,
 } from '../utils/fridgeVisualizer';
@@ -48,6 +50,29 @@ describe('getStorageTypeLabel', () => {
 
     test('falls back to the raw value for unknown storage types', () => {
         expect(getStorageTypeLabel('cellar')).toBe('cellar');
+    });
+});
+
+describe('fridge view model overrides', () => {
+    test('returns model-specific hotspot coordinates for shared view ids', () => {
+        expect(getFridgeViewConfig('two_layered', 'lower-fridge').hotspot.markerLeft).toBe('37%');
+        expect(getFridgeViewConfig('three_layered', 'lower-fridge').hotspot.markerLeft).toBe('64%');
+    });
+
+    test('keeps zoom settings available in model-specific view configs', () => {
+        expect(getFridgeViewConfig('mini', 'mini-pantry')).toMatchObject({
+            scale: 1.25,
+            x: '-34%',
+            y: '-3%',
+        });
+    });
+
+    test('builds hotspot configs from the active fridge model only', () => {
+        expect(getFridgeHotspotConfigs('mini').map(config => config.id)).toEqual([
+            'main-fridge',
+            'main-door',
+            'mini-pantry',
+        ]);
     });
 });
 

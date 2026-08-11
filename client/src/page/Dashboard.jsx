@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Minus, Plus } from 'lucide-react';
 import { useAuthentication } from '../context/AuthenticationContext';
@@ -15,13 +15,14 @@ import { getCurrentHouseholdId, setCurrentHouseholdId } from '../utils/currentHo
 import {
     FRIDGE_MODEL_SECTIONS,
     FRIDGE_MODEL_COMPARTMENT_VIEWS,
-    FRIDGE_MODEL_VIEW_OVERRIDES,
     FRIDGE_VIEW_CONFIG,
     STORAGE_SECTIONS,
     STORAGE_TYPE_OPTIONS,
     buildSectionDrafts,
     getActiveFridge,
     getCurrentFridgeItems,
+    getFridgeHotspotConfigs,
+    getFridgeViewConfig,
     getStorageTypeLabel,
     getVisibleInventoryItems,
 } from '../utils/fridgeVisualizer';
@@ -223,9 +224,12 @@ export default function Dashboard() {
     const [sectionDrafts, setSectionDrafts] = useState(() => buildSectionDrafts('two_layered'));
     const [showStorageGuide, setShowStorageGuide] = useState(false);
     const [renderedInventoryItems, setRenderedInventoryItems] = useState([]);
+    const [renderedInventoryEmptyMessage, setRenderedInventoryEmptyMessage] = useState('No items match these filters.');
     const [inventoryListPhase, setInventoryListPhase] = useState('entered');
     const inventoryListFirstRender = useRef(true);
     const inventoryListEnterTimer = useRef(null);
+    const inventoryChromeRef = useRef(null);
+    const previousInventoryChromeTop = useRef(null);
     const visualizerOpeningTimer = useRef(null);
     const inventorySearchInputRef = useRef(null);
     const notificationSnoozeKey = useMemo(() => getNotificationSnoozeKey(user?.id), [user?.id]);
@@ -263,23 +267,9 @@ export default function Dashboard() {
         [activeFridgeModelType]
     );
     const allOpenFridgeImage = activeFridgeStateImages['all-open'] ?? activeFridgeVisualizerImage;
-    const activeFridgeViewConfig = FRIDGE_VIEW_CONFIG[fridgeView] ?? FRIDGE_VIEW_CONFIG['all-open'];
+    const activeFridgeViewConfig = getFridgeViewConfig(activeFridgeModelType, fridgeView);
     const fridgeHotspotConfigs = hasCompartmentPreview
-        ? activeFridgeViewIds
-            .map(view => {
-                const baseConfig = FRIDGE_VIEW_CONFIG[view];
-                const override = FRIDGE_MODEL_VIEW_OVERRIDES[activeFridgeModelType]?.[view] ?? {};
-                return {
-                    id: view,
-                    ...baseConfig,
-                    ...override,
-                    hotspot: {
-                        ...baseConfig?.hotspot,
-                        ...override.hotspot,
-                    },
-                };
-            })
-            .filter(config => config.hotspot)
+        ? getFridgeHotspotConfigs(activeFridgeModelType)
         : [];
 
     const visibleInventoryItems = useMemo(() => getVisibleInventoryItems({
@@ -311,6 +301,11 @@ export default function Dashboard() {
         () => searchedItems.map(item => item.id).join(','),
         [searchedItems]
     );
+    const inventoryEmptyMessage = searchText
+        ? `No items match "${searchText}".`
+        : activeFridgeViewConfig.inventoryLocation
+        ? `No items in ${activeFridgeViewConfig.label.toLowerCase()} yet.`
+        : 'No items match these filters.';
 
     const activeFilterCount = expiryFilter.size + storageFilter.size;
 
@@ -562,21 +557,66 @@ export default function Dashboard() {
     }, [activeInventoryView, fridgeView, returnToFullFridgeView]);
 
     useEffect(() => {
-        if (inventoryListFirstRender.current) {
-            inventoryListFirstRender.current = false;
-            setRenderedInventoryItems(searchedItems);
+        if (!activeInventoryView) return undefined;
+        document.documentElement.classList.add('inventory-modal-open');
+        document.body.classList.add('inventory-modal-open');
+        return () => {
+            document.documentElement.classList.remove('inventory-modal-open');
+            document.body.classList.remove('inventory-modal-open');
+        };
+    }, [activeInventoryView]);
+
+    useLayoutEffect(() => {
+        const chrome = inventoryChromeRef.current;
+        if (!activeInventoryView || !chrome) {
+            previousInventoryChromeTop.current = null;
             return undefined;
         }
 
+        const nextTop = chrome.getBoundingClientRect().top;
+        const previousTop = previousInventoryChromeTop.current;
+        previousInventoryChromeTop.current = nextTop;
+
+        if (previousTop === null) return undefined;
+
+        const deltaY = previousTop - nextTop;
+        if (Math.abs(deltaY) < 2) return undefined;
+
+        const animation = chrome.animate(
+            [
+                { transform: `translateY(${deltaY}px)` },
+                { transform: 'translateY(0)' },
+            ],
+            {
+                duration: 360,
+                easing: 'cubic-bezier(.2, 0, 0, 1)',
+            }
+        );
+
+        return () => animation.cancel();
+    }, [activeInventoryView, fridgeView, inventoryTitle, renderedInventoryItems.length, showFilters]);
+
+    useEffect(() => {
+        if (inventoryListFirstRender.current) {
+            inventoryListFirstRender.current = false;
+            setRenderedInventoryItems(searchedItems);
+            setRenderedInventoryEmptyMessage(inventoryEmptyMessage);
+            return undefined;
+        }
+
+        if (inventoryListEnterTimer.current) {
+            window.clearTimeout(inventoryListEnterTimer.current);
+        }
         setInventoryListPhase('leaving');
         const leaveTimer = window.setTimeout(() => {
             setRenderedInventoryItems(searchedItems);
+            setRenderedInventoryEmptyMessage(inventoryEmptyMessage);
             setInventoryListPhase('entering');
             const enterTimer = window.setTimeout(() => {
                 setInventoryListPhase('entered');
-            }, 260);
+            }, 360);
             inventoryListEnterTimer.current = enterTimer;
-        }, fridgeView === 'all-open' ? 120 : 170);
+        }, fridgeView === 'all-open' ? 160 : 230);
 
         return () => {
             window.clearTimeout(leaveTimer);
@@ -584,7 +624,7 @@ export default function Dashboard() {
                 window.clearTimeout(inventoryListEnterTimer.current);
             }
         };
-    }, [searchedItemIds, searchedItems, fridgeView]);
+    }, [inventoryEmptyMessage, searchedItemIds, searchedItems, fridgeView]);
 
     useEffect(() => () => {
         if (visualizerOpeningTimer.current) window.clearTimeout(visualizerOpeningTimer.current);
@@ -1412,58 +1452,59 @@ export default function Dashboard() {
                             </div>
                         )}
                         <div className="inventory-stage-content">
-                            <div className="section-heading">
-                            <div>
-                                <p className="eyebrow">Sorted by expiry date</p>
-                                <h2 id="inventory-modal-title">{inventoryTitle}</h2>
-                            </div>
-                            <button className="icon-button inventory-stage-close" aria-label="Close" onClick={ closeInventory }>x</button>
-                            </div>
+                            <div className="inventory-stage-chrome" ref={inventoryChromeRef}>
+                                <div className="section-heading">
+                                <div>
+                                    <p className="eyebrow">Sorted by expiry date</p>
+                                    <h2 id="inventory-modal-title">{inventoryTitle}</h2>
+                                </div>
+                                <button className="icon-button inventory-stage-close" aria-label="Close" onClick={ closeInventory }>x</button>
+                                </div>
 
-                            <div className="inventory-search">
-                            <div className="inventory-search-pill">
-                                <input
-                                    type="text"
-                                    className="inventory-search-input"
-                                    ref={inventorySearchInputRef}
-                                    value={searchText}
-                                    onChange={event => setSearchText(event.target.value)}
-                                    placeholder="Search items by name..."
-                                    autoFocus
-                                />
-                                <span className="inventory-search-icon" aria-hidden="true">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="11" cy="11" r="7" />
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                <div className="inventory-search">
+                                <div className="inventory-search-pill">
+                                    <input
+                                        type="text"
+                                        className="inventory-search-input"
+                                        ref={inventorySearchInputRef}
+                                        value={searchText}
+                                        onChange={event => setSearchText(event.target.value)}
+                                        placeholder="Search items by name..."
+                                        autoFocus
+                                    />
+                                    <span className="inventory-search-icon" aria-hidden="true">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="11" cy="11" r="7" />
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                        </svg>
+                                    </span>
+                                    <button type="button" className="inventory-search-mic" aria-label="Voice search (coming soon)" disabled>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="9" y="2" width="6" height="12" rx="3" />
+                                            <path d="M5 10a7 7 0 0 0 14 0" />
+                                            <line x1="12" y1="19" x2="12" y2="22" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    className={`inventory-filter-button${showFilters ? ' is-active' : ''}`}
+                                    aria-label="Filter items"
+                                    aria-pressed={showFilters}
+                                    onClick={() => setShowFilters(v => !v)}
+                                >
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="4" y1="8" x2="20" y2="8" />
+                                        <circle cx="9" cy="8" r="2.6" fill="#faf6e6" />
+                                        <line x1="4" y1="16" x2="20" y2="16" />
+                                        <circle cx="15" cy="16" r="2.6" fill="#faf6e6" />
                                     </svg>
-                                </span>
-                                <button type="button" className="inventory-search-mic" aria-label="Voice search (coming soon)" disabled>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="9" y="2" width="6" height="12" rx="3" />
-                                        <path d="M5 10a7 7 0 0 0 14 0" />
-                                        <line x1="12" y1="19" x2="12" y2="22" />
-                                    </svg>
+                                    {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
                                 </button>
                             </div>
-                            <button
-                                type="button"
-                                className={`inventory-filter-button${showFilters ? ' is-active' : ''}`}
-                                aria-label="Filter items"
-                                aria-pressed={showFilters}
-                                onClick={() => setShowFilters(v => !v)}
-                            >
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="4" y1="8" x2="20" y2="8" />
-                                    <circle cx="9" cy="8" r="2.6" fill="#faf6e6" />
-                                    <line x1="4" y1="16" x2="20" y2="16" />
-                                    <circle cx="15" cy="16" r="2.6" fill="#faf6e6" />
-                                </svg>
-                                {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-                            </button>
-                        </div>
 
-                        {showFilters && (
-                            <div className="inventory-filters">
+                            {showFilters && (
+                                <div className="inventory-filters">
                                 <div className="filter-group">
                                     <span className="filter-group-label">Expiry</span>
                                     <div className="filter-chips">
@@ -1504,24 +1545,25 @@ export default function Dashboard() {
                                 )}
                             </div>
                         )}
+                            </div>
 
                         {loading ? (
 
                             <p className="panel empty-state">Items loading...</p>
                         ) : (
                             <div className={`inventory-results inventory-results-${inventoryListPhase}`}>
-                            {renderedInventoryItems.length === 0 ? (
-                            <p className="panel empty-state">
-                                {searchText ? `No items match “${searchText}”.` : 'No items match these filters.'}
-                            </p>
-                        ) : (
-                            <ItemList
-                                itemList={renderedInventoryItems}
-                                onEditItem={openEditForm}
-                                onItemDeleted={() => refreshAfterItemChange('Item successfully deleted.')}
-                                onItemUpdated={() => refreshAfterItemChange('Item successfully updated.')}
-                            />
-                            )}
+                                {renderedInventoryItems.length === 0 ? (
+                                    <p className="panel empty-state inventory-results-empty">
+                                        {renderedInventoryEmptyMessage}
+                                    </p>
+                                ) : (
+                                    <ItemList
+                                        itemList={renderedInventoryItems}
+                                        onEditItem={openEditForm}
+                                        onItemDeleted={() => refreshAfterItemChange('Item successfully deleted.')}
+                                        onItemUpdated={() => refreshAfterItemChange('Item successfully updated.')}
+                                    />
+                                )}
                             </div>
                         )}
                         </div>
