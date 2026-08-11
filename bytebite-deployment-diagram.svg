@@ -1,0 +1,64 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="900" fill="#FFF8EA"/>
+  <rect x="72" y="58" width="1456" height="784" rx="28" fill="#FEFDF7" stroke="#D8E1C8" stroke-width="4"/>
+
+  <text x="800" y="124" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="58" font-weight="800" fill="#24422E">ByteBite Deployment Flow</text>
+  <text x="800" y="172" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="26" fill="#687866">From code changes to the live app</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto">
+      <path d="M2 2L10 6L2 10" fill="none" stroke="#315438" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="110" y="306" width="220" height="168" rx="20" fill="#F7D774" stroke="#315438" stroke-width="4"/>
+    <text x="220" y="364" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">Feature</text>
+    <text x="220" y="402" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">Branch</text>
+    <text x="220" y="444" text-anchor="middle" font-size="22" fill="#315438">new work isolated</text>
+
+    <rect x="420" y="306" width="220" height="168" rx="20" fill="#BFDDB8" stroke="#315438" stroke-width="4"/>
+    <text x="530" y="364" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">Pull</text>
+    <text x="530" y="402" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">Request</text>
+    <text x="530" y="444" text-anchor="middle" font-size="22" fill="#315438">review + discussion</text>
+
+    <rect x="730" y="306" width="220" height="168" rx="20" fill="#C9E4E7" stroke="#315438" stroke-width="4"/>
+    <text x="840" y="364" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">GitHub</text>
+    <text x="840" y="402" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">Actions</text>
+    <text x="840" y="444" text-anchor="middle" font-size="22" fill="#315438">backend tests run</text>
+
+    <rect x="1040" y="306" width="220" height="168" rx="20" fill="#F4B6A6" stroke="#315438" stroke-width="4"/>
+    <text x="1150" y="364" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">Merge to</text>
+    <text x="1150" y="402" text-anchor="middle" font-size="29" font-weight="800" fill="#24422E">Main</text>
+    <text x="1150" y="444" text-anchor="middle" font-size="22" fill="#315438">approved changes</text>
+
+    <rect x="1272" y="620" width="220" height="124" rx="20" fill="#FFFFFF" stroke="#315438" stroke-width="4"/>
+    <text x="1382" y="671" text-anchor="middle" font-size="28" font-weight="800" fill="#24422E">Supabase</text>
+    <text x="1382" y="711" text-anchor="middle" font-size="22" fill="#315438">PostgreSQL database</text>
+
+    <rect x="846" y="620" width="320" height="124" rx="20" fill="#FFFFFF" stroke="#315438" stroke-width="4"/>
+    <text x="1006" y="662" text-anchor="middle" font-size="26" font-weight="800" fill="#24422E">Azure</text>
+    <text x="1006" y="696" text-anchor="middle" font-size="26" font-weight="800" fill="#24422E">Container Apps</text>
+    <text x="1006" y="728" text-anchor="middle" font-size="21" fill="#315438">Express backend API</text>
+
+    <rect x="452" y="620" width="246" height="124" rx="20" fill="#FFFFFF" stroke="#315438" stroke-width="4"/>
+    <text x="575" y="671" text-anchor="middle" font-size="28" font-weight="800" fill="#24422E">Vercel</text>
+    <text x="575" y="711" text-anchor="middle" font-size="22" fill="#315438">React frontend</text>
+
+    <rect x="110" y="620" width="220" height="124" rx="20" fill="#FFFFFF" stroke="#315438" stroke-width="4"/>
+    <text x="220" y="671" text-anchor="middle" font-size="28" font-weight="800" fill="#24422E">Users</text>
+    <text x="220" y="711" text-anchor="middle" font-size="22" fill="#315438">open ByteBite app</text>
+
+    <line x1="350" y1="390" x2="400" y2="390" stroke="#315438" stroke-width="5" marker-end="url(#arrow)"/>
+    <line x1="660" y1="390" x2="710" y2="390" stroke="#315438" stroke-width="5" marker-end="url(#arrow)"/>
+    <line x1="970" y1="390" x2="1020" y2="390" stroke="#315438" stroke-width="5" marker-end="url(#arrow)"/>
+
+    <path d="M1150 486 C1150 552 1006 552 1006 604" stroke="#315438" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M1150 486 C1150 552 575 552 575 604" stroke="#315438" stroke-width="5" fill="none" marker-end="url(#arrow)"/>
+    <line x1="350" y1="682" x2="432" y2="682" stroke="#315438" stroke-width="5" marker-end="url(#arrow)"/>
+    <line x1="718" y1="682" x2="826" y2="682" stroke="#315438" stroke-width="5" marker-end="url(#arrow)"/>
+    <line x1="1186" y1="682" x2="1252" y2="682" stroke="#315438" stroke-width="5" marker-end="url(#arrow)"/>
+
+    <text x="800" y="805" text-anchor="middle" font-size="24" fill="#687866">Vercel serves the frontend, Azure runs the backend container, and Supabase stores the app data.</text>
+  </g>
+</svg>

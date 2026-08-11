@@ -214,15 +214,160 @@ export const FRIDGE_MODEL_COMPARTMENT_VIEWS = {
 };
 
 export const FRIDGE_MODEL_VIEW_OVERRIDES = {
-    three_layered: {
+    two_layered: {
+        'upper-door': {
+            scale: 2.5,
+            x: '50%',
+            y: '40%',
+            hotspot: { left: '20%', top: '19%', width: '17%', height: '24%', markerLeft: '46%', markerTop: '53%' },
+        },
+        'upper-fridge': {
+            scale: 2.5,
+            x: '4%',
+            y: '40%',
+            hotspot: { left: '33%', top: '19%', width: '26%', height: '25%', markerLeft: '41%', markerTop: '52%' },
+        },
         'lower-door': {
-            hotspot: { left: '16%', top: '43%', width: '19%', height: '36%', markerLeft: '58%', markerTop: '63%' },
+            scale: 2.5,
+            x: '50%',
+            y: '-16%',
+            hotspot: { left: '20%', top: '43%', width: '19%', height: '36%', markerLeft: '34%', markerTop: '38%' },
         },
         'lower-fridge': {
-            hotspot: { left: '34%', top: '44%', width: '25%', height: '35%', markerLeft: '64%', markerTop: '66%' },
+            scale: 2.5,
+            x: '4%',
+            y: '-16%',
+            hotspot: { left: '33%', top: '43%', width: '25%', height: '35%', markerLeft: '37%', markerTop: '37%' },
+        },
+        pantry: {
+            scale: 1.8,
+            x: '-33%',
+            y: '-6%',
+            hotspot: { left: '56%', top: '30%', width: '17%', height: '46%', markerLeft: '47%', markerTop: '38%' },
+        },
+    },
+    three_layered: {
+        'upper-door': {
+            scale: 2.3,
+            x: '50%',
+            y: '60%',
+            hotspot: { left: '16%', top: '9%', width: '17%', height: '24%', markerLeft: '46%', markerTop: '53%' },
+        },
+        'upper-fridge': {
+            scale: 2.3,
+            x: '10%',
+            y: '60%',
+            hotspot: { left: '37%', top: '9%', width: '26%', height: '25%', markerLeft: '41%', markerTop: '52%' },
+        },
+        'middle-door': {
+            scale: 2.3,
+            x: '50%',
+            y: '-4%',
+            hotspot: { left: '16%', top: '37%', width: '19%', height: '27%', markerLeft: '42%', markerTop: '48%' },
+        },
+        'middle-fridge': {
+            scale: 2.3,
+            x: '10%',
+            y: '-4%',
+            hotspot: { left: '37%', top: '37%', width: '24%', height: '27%', markerLeft: '45%', markerTop: '49%' },
+        },
+        'lower-door': {
+            scale: 2.3,
+            x: '50%',
+            y: '-60%',
+            hotspot: { left: '14%', top: '60%', width: '19%', height: '36%', markerLeft: '58%', markerTop: '63%' },
+        },
+        'lower-fridge': {
+            scale: 2.3,
+            x: '10%',
+            y: '-60%',
+            hotspot: { left: '31%', top: '60%', width: '25%', height: '35%', markerLeft: '64%', markerTop: '66%' },
+        },
+        pantry: {
+            scale: 1.55,
+            x: '-33%',
+            y: '-6%',
+            hotspot: { left: '68%', top: '33%', width: '17%', height: '46%', markerLeft: '47%', markerTop: '38%' },
+        },
+    },
+    mini: {
+        'main-door': {
+            scale: 1.72,
+            x: '40%',
+            y: '-15%',
+            hotspot: { left: '10%', top: '45%', width: '18%', height: '34%', markerLeft: '46%', markerTop: '48%' },
+        },
+        'main-fridge': {
+            scale: 1.72,
+            x: '10%',
+            y: '-15%',
+            hotspot: { left: '34%', top: '45%', width: '22%', height: '34%', markerLeft: '48%', markerTop: '52%' },
+        },
+        'mini-pantry': {
+            scale: 1.25,
+            x: '-34%',
+            y: '-3%',
+            hotspot: { left: '73%', top: '23%', width: '17%', height: '48%', markerLeft: '50%', markerTop: '48%' },
+        },
+    },
+    side_by_side: {
+        'left-door': {
+            scale: 1.62,
+            x: '50%',
+            y: '-2%',
+            hotspot: { left: '6%', top: '15%', width: '16%', height: '43%', markerLeft: '52%', markerTop: '48%' },
+        },
+        'left-fridge': {
+            scale: 1.62,
+            x: '30%',
+            y: '-2%',
+            hotspot: { left: '24%', top: '35%', width: '17%', height: '44%', markerLeft: '47%', markerTop: '45%' },
+        },
+        'right-door': {
+            scale: 1.62,
+            x: '-30%',
+            y: '-2%',
+            hotspot: { left: '58%', top: '35%', width: '20%', height: '43%', markerLeft: '47%', markerTop: '50%' },
+        },
+        'right-fridge': {
+            scale: 1.62,
+            x: '-10%',
+            y: '-2%',
+            hotspot: { left: '43%', top: '15%', width: '18%', height: '44%', markerLeft: '42%', markerTop: '54%' },
+        },
+        'side-pantry': {
+            scale: 1.55,
+            x: '-60%',
+            y: '-4%',
+            hotspot: { left: '81%', top: '25%', width: '17%', height: '42%', markerLeft: '35%', markerTop: '47%' },
         },
     },
 };
+
+export function getFridgeViewConfig(modelId, viewId) {
+    const baseConfig = FRIDGE_VIEW_CONFIG[viewId] ?? FRIDGE_VIEW_CONFIG['all-open'];
+    const modelConfig = FRIDGE_MODEL_VIEW_OVERRIDES[modelId]?.[viewId] ?? {};
+
+    return {
+        ...baseConfig,
+        ...modelConfig,
+        hotspot: baseConfig.hotspot || modelConfig.hotspot
+            ? {
+                ...baseConfig.hotspot,
+                ...modelConfig.hotspot,
+            }
+            : undefined,
+    };
+}
+
+export function getFridgeHotspotConfigs(modelId) {
+    return (FRIDGE_MODEL_COMPARTMENT_VIEWS[modelId] ?? [])
+        .map(view => ({
+            id: view,
+            ...getFridgeViewConfig(modelId, view),
+        }))
+        .filter(config => config.hotspot);
+}
 
 export function getModelSections(modelId) {
     return FRIDGE_MODEL_SECTIONS[modelId] ?? FRIDGE_MODEL_SECTIONS.two_layered;
